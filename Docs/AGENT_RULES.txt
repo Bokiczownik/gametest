@@ -1,0 +1,76 @@
+# Agent Rules (Unreal Engine 5.8, project: Nowaproba)
+
+## 1. Role & priority
+Implementation agent, not designer. Do only what the task asks; no scope expansion.
+Priority when sources conflict: user task > this file > Docs/ARCHITECTURE.md (if exists) > existing implementation > own assumptions.
+Do not invent requirements.
+
+## 2. Project facts
+- Blueprint-only project (no Source/ folder, no C++ module). Implement in Blueprints.
+- Adding C++ (module, Build.cs, Target.cs, .uproject edit) requires user approval first.
+- Editor tools are available via unreal-mcp (http://127.0.0.1:8000/mcp) only while the editor is running.
+- Modify Content assets (.uasset/.umap) only through the editor/MCP, never by editing files on disk.
+- Git repo, branch main, remote origin = https://github.com/Bokiczownik/gametest
+- Only code, scripts, config and docs go to git. Assets (.uasset/.umap/media) are ignored and stay local; never commit or force-add them.
+- Uncommitted changes found at task start are the user's work: do not include them in your commit unless the task concerns them; never reset, force-push, rewrite history, or delete unrelated files.
+
+## 3. Token & work efficiency
+- Read Docs/PROJECT_MAP.txt first if the task touches existing systems; it may already answer where things are.
+- Read/search only what the task needs; targeted search, never full-project sweeps.
+- Never re-read unchanged files or redo a search already done in this session.
+- Before creating any system/asset, check PROJECT_MAP.txt and do one targeted search for an existing one; extend it rather than duplicate.
+- After a task, add newly discovered durable facts to Docs/PROJECT_MAP.txt (one line each: system -> asset path, purpose; working verify steps). Do not record what is already there or obvious.
+- No explanations of routine steps, no alternatives unless asked, no restating the task, no narration.
+- Smallest implementation that satisfies the task.
+
+## 4. Scope
+Do not: add unrequested features/mechanics, refactor, rename, reorganize, reformat, or "improve" unrelated code/assets.
+Unrelated problem found: do not fix; mention in NOTES.
+Small refactor allowed only if it blocks the task and is directly related; large refactor -> BLOCKED.
+
+## 5. Ambiguity
+Small impact: take the smallest reasonable assumption, list it in NOTES, continue.
+Major impact (architecture, gameplay design, save data, networking, new dependency, C++): BLOCKED.
+
+## 6. Architecture
+Follow UE conventions and naming (A/U/F/E/I prefixes; BP_, WBP_, DA_, DT_ etc. for assets).
+- No reusable gameplay logic in Level Blueprints; keep unrelated systems out of the Player Character.
+- Prefer Actor Components for reusable behaviour, interfaces for decoupling, Data Assets/Data Tables for config data.
+- Avoid global state, unnecessary dependencies, new patterns without need.
+- Decision order: correctness > existing architecture > simplicity > maintainability > performance. Prefer boring and predictable.
+- Avoid: unneeded Tick (prefer events), per-frame expensive work, uncontrolled spawning, unbounded arrays, repeated searches/casts, unneeded asset loads.
+- Guard against invalid refs/destroyed actors/init order only where invalid state is realistically possible.
+
+## 7. Dependencies & assets
+- No new plugins/modules/external dependencies without approval; prefer built-in UE features.
+- No placeholder assets unless asked. Never invent asset paths; use an existing suitable asset or report it missing.
+- Do not modify engine source or generated files (Intermediate/, Saved/, DerivedDataCache/).
+
+## 8. Errors
+Fix root cause, not symptoms. If the same approach fails twice, stop and reassess. Never hide errors, warnings or failed checks.
+
+## 9. Verification
+- Blueprint changes: compile affected Blueprints via MCP and check for errors/broken references.
+- Run only checks relevant to the change.
+- If the editor/MCP is unavailable, report VERIFICATION: NOT RUN (reason). Never claim untested work works.
+
+## 10. Stop conditions -> BLOCKED
+Major design/architecture decision needed; missing dependency or asset; contradictory requirements or conflict with docs; large refactor needed; risk of losing user work; unresolved critical error.
+
+## 11. Done
+DONE = requested behaviour implemented, follows existing architecture, nothing extra added, affected Blueprints compile, relevant verification passed (or explicitly NOT RUN with reason).
+
+## 12. Commit after every change
+After any task that changed tracked files (including verification NOT RUN, excluding BLOCKED with no changes):
+- Stage only files you changed (git add <paths>, never git add -A blindly), commit, then git push origin main.
+- Message: short imperative summary line, e.g. "Add health component to player".
+- If push fails, report it in NOTES; do not retry with force.
+Add the commit hash to the report under CHANGED.
+
+## 13. Report format (only this, nothing else)
+STATUS: DONE | BLOCKED
+CHANGED: files/assets (or none)
+SUMMARY: 1-3 lines
+VERIFICATION: PASS - what | FAIL - exact error | NOT RUN - reason
+NOTES: assumptions, unrelated issues (omit if none)
+REQUIRED: decision/info needed (only if BLOCKED)

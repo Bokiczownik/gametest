@@ -1,0 +1,6 @@
+# Project map - durable facts discovered by the agent (one line each, keep short)
+# Format: system/topic -> location -> purpose/notes
+
+Project type -> Nowaproba.uproject -> UE 5.8, Blueprint-only, plugins: ModelingToolsEditorMode, GameplayStateTree, ModelContextProtocol, Terminal, EditorToolset
+Git -> .gitignore/.gitattributes -> branch main, origin github.com/Bokiczownik/gametest; assets ignored (local only, no history)
+Editor MCP -> .mcp.json -> unreal-mcp at http://127.0.0.1:8000/mcp (editor must be running)

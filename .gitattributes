@@ -1,0 +1,10 @@
+# Text files
+*.ini text eol=crlf
+*.txt text
+*.md text
+*.uproject text
+*.json text
+*.cs text
+*.h text
+*.cpp text
+*.py text
