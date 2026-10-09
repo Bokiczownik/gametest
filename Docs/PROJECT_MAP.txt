@@ -3,7 +3,7 @@
 
 Project type -> Nowaproba.uproject -> UE 5.8, C++ module Nowaproba (Source/) + Blueprints, plugins: ModelingToolsEditorMode, GameplayStateTree, ModelContextProtocol, Terminal, EditorToolset
 Git -> .gitignore/.gitattributes -> branch main, origin github.com/Bokiczownik/gametest; assets ignored (local only, no history)
-Framework -> BP_TopDownGameMode -> pawn BP_TopDownCharacter, controller BP_TopDownController, HUD /Game/Blueprints/NewHUD (BeginPlay creates UCurrencyDebugWidget, then UResourceDebugWidget, then UMovementModeWidget)
+Framework -> BP_TopDownGameMode -> pawn BP_TopDownCharacter, controller BP_TopDownController, HUD /Game/Blueprints/NewHUD (BeginPlay creates UCurrencyDebugWidget, then UResourceDebugWidget, then UMovementModeWidget, then UComboWidget)
 Old currency prototype (BP, unfinished) -> /Game/Money (actor, Currency var), /Game/Currency_widget (binding casts GameMode, returns nothing)
 Build -> E:/UE_5.8/Engine/Build/BatchFiles/Build.bat NowaprobaEditor Win64 Development -Project=E:\Nowaproba\Nowaproba.uproject -WaitMutex ; needs Windows SDK 10.0.22621 (installed) + MSVC 14.50 toolset (UBT bans 14.40-14.43; only 14.43 in VS2022 as of 2026-10-09)
 Currency -> Source/Nowaproba/Currency: UCurrencyComponent (on BP_TopDownCharacter as "Currency"), UCurrencyDebugWidget (top-right wallet, temp +/-100 buttons)
@@ -18,3 +18,6 @@ Creating assets via MCP -> no create tool; duplicate an existing asset of the sa
 Movement modes -> Source/Nowaproba/Movement: UMovementModeComponent on BP_TopDownController as "MovementMode" (DefaultMode WASD; swaps IMC_WASD / IMC_PointAndClick; binds IA_Move (Axis2D, X=fwd Y=left, AccumulationBehavior Cumulative so W+D = diagonal) camera-relative), UMovementModeWidget (bottom-left WASD / Point & Click buttons); click-to-move BP graph unchanged, gated only by its mapping context
 New UCLASS in C++ -> editor must be closed: build NowaprobaEditor target, relaunch E:/UE_5.8/Engine/Binaries/Win64/UnrealEditor.exe with the .uproject; asset edits fail while PIE runs ("Editor is currently in a play mode")
 Sprint -> IA_Sprint (Boolean) mapped to LeftShift in IMC_Default (both movement modes); BP_TopDownCharacter EventGraph: Started->CharacterMovement.MaxWalkSpeed=SprintSpeed, Completed/Canceled->=WalkSpeed; tune vars WalkSpeed 600 / SprintSpeed 1000 (category Movement|Sprint); keep WalkSpeed equal to CharMoveComp MaxWalkSpeed
+Coins/combo -> Source/Nowaproba/Collectibles: AGoldCoin (Trigger sphere, pays Value=5 on overlap by player-controlled pawn, then Destroy) -> /Game/Collectibles/BP_GoldCoin (Cylinder + MI_GoldCoin, 15 placed in Lvl_TopDown outliner folder Collectibles); UCoinComboComponent on BP_TopDownCharacter as "Combo" (+0.1 per coin while bar >0, max x5, ComboDuration 1.5s, reward=Round(5*mult) into UCurrencyComponent; ticks only while active); UComboWidget top-center
+Include other module folders -> use relative includes ("../Currency/CurrencyComponent.h"); module root is not on the include path
+Runtime test without input -> raise PlayerStart temporarily so the possessed pawn falls through test actors (overlaps during spawn happen before possession); restore afterwards
