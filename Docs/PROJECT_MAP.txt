@@ -9,3 +9,4 @@ Build -> E:/UE_5.8/Engine/Build/BatchFiles/Build.bat NowaprobaEditor Win64 Devel
 Currency -> Source/Nowaproba/Currency: UCurrencyComponent (on BP_TopDownCharacter as "Currency"), UCurrencyDebugWidget (top-right wallet, temp +/-100 buttons)
 MCP widget layout -> no tool edits UMG designer trees; build widget layouts in C++ (WidgetTree) instead
 Editor MCP -> .mcp.json -> unreal-mcp at http://127.0.0.1:8000/mcp (editor must be running); editor UI is Polish so node type_ids are localized (use find_node_types); save via AssetTools.save_assets; no tool calls functions/clicks in PIE
+Compile check with editor open -> Build.bat Nowaproba Win64 Development -Project=... -WaitMutex -NoHotReload (game target, not blocked by editor Live Coding mutex; ~60s); NowaprobaEditor build is blocked while editor runs
