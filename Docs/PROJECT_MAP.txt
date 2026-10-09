@@ -3,7 +3,7 @@
 
 Project type -> Nowaproba.uproject -> UE 5.8, C++ module Nowaproba (Source/) + Blueprints, plugins: ModelingToolsEditorMode, GameplayStateTree, ModelContextProtocol, Terminal, EditorToolset
 Git -> .gitignore/.gitattributes -> branch main, origin github.com/Bokiczownik/gametest; assets ignored (local only, no history)
-Framework -> BP_TopDownGameMode -> pawn BP_TopDownCharacter, controller BP_TopDownController, HUD /Game/Blueprints/NewHUD (BeginPlay creates /Game/Time widget, then UCurrencyDebugWidget, then UResourceDebugWidget)
+Framework -> BP_TopDownGameMode -> pawn BP_TopDownCharacter, controller BP_TopDownController, HUD /Game/Blueprints/NewHUD (BeginPlay creates UCurrencyDebugWidget, then UResourceDebugWidget)
 Old currency prototype (BP, unfinished) -> /Game/Money (actor, Currency var), /Game/Currency_widget (binding casts GameMode, returns nothing)
 Build -> E:/UE_5.8/Engine/Build/BatchFiles/Build.bat NowaprobaEditor Win64 Development -Project=E:\Nowaproba\Nowaproba.uproject -WaitMutex ; needs Windows SDK 10.0.22621 (installed) + MSVC 14.50 toolset (UBT bans 14.40-14.43; only 14.43 in VS2022 as of 2026-10-09)
 Currency -> Source/Nowaproba/Currency: UCurrencyComponent (on BP_TopDownCharacter as "Currency"), UCurrencyDebugWidget (top-right wallet, temp +/-100 buttons)
@@ -11,3 +11,7 @@ Resources -> Source/Nowaproba/Resources: UResourceComponent (3 balances, EResour
 MCP widget layout -> no tool edits UMG designer trees; build widget layouts in C++ (WidgetTree) instead
 Editor MCP -> .mcp.json -> unreal-mcp at http://127.0.0.1:8000/mcp (editor must be running); editor UI is Polish so node type_ids are localized (use find_node_types); save via AssetTools.save_assets; no tool calls functions/clicks in PIE
 Compile check with editor open -> Build.bat Nowaproba Win64 Development -Project=... -WaitMutex -NoHotReload (game target, not blocked by editor Live Coding mutex; ~60s); NowaprobaEditor build is blocked while editor runs
+Time/clock (ARCHIVED, unused) -> /Game/Archive/UnusedSystems/TimeSystem/Time (widget): not created anywhere; Space binding removed; TimeGraph2 Tick -> CalculateTime (DeltaTime*TimeSpeed) -> UpdateClockCalendar; buttons bound at OnInitialized
+MCP blueprint tips -> read_graph_dsl returns empty here (use find_nodes+get_node_infos); widget OnClicked events can't be created via MCP (use Bind Event to OnClicked); test PIE runtime by temporarily changing CDO defaults + LogBlueprintUserMessages
+Jump -> IA_Jump (/Game/TopDown/Input/Actions, Boolean) mapped to SpaceBar in IMC_Default; BP_TopDownCharacter EventGraph: Started->Jump, Completed/Canceled->StopJumping; tuning in CharMoveComp (JumpZVelocity 420, GravityScale 1.5) and JumpMaxCount 1; anims via ABP_Unarmed Main States (Jump/Fall Loop/Land on IsFalling)
+Creating assets via MCP -> no create tool; duplicate an existing asset of the same class (AssetTools.duplicate) then set_properties; editor minimized = widgets do not tick in PIE
