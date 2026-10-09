@@ -1,6 +1,11 @@
 # Project map - durable facts discovered by the agent (one line each, keep short)
 # Format: system/topic -> location -> purpose/notes
 
-Project type -> Nowaproba.uproject -> UE 5.8, Blueprint-only, plugins: ModelingToolsEditorMode, GameplayStateTree, ModelContextProtocol, Terminal, EditorToolset
+Project type -> Nowaproba.uproject -> UE 5.8, C++ module Nowaproba (Source/) + Blueprints, plugins: ModelingToolsEditorMode, GameplayStateTree, ModelContextProtocol, Terminal, EditorToolset
 Git -> .gitignore/.gitattributes -> branch main, origin github.com/Bokiczownik/gametest; assets ignored (local only, no history)
-Editor MCP -> .mcp.json -> unreal-mcp at http://127.0.0.1:8000/mcp (editor must be running)
+Framework -> BP_TopDownGameMode -> pawn BP_TopDownCharacter, controller BP_TopDownController, HUD /Game/Blueprints/NewHUD (BeginPlay creates /Game/Time widget, then UCurrencyDebugWidget)
+Old currency prototype (BP, unfinished) -> /Game/Money (actor, Currency var), /Game/Currency_widget (binding casts GameMode, returns nothing)
+Build -> E:/UE_5.8/Engine/Build/BatchFiles/Build.bat NowaprobaEditor Win64 Development -Project=E:\Nowaproba\Nowaproba.uproject -WaitMutex ; needs Windows SDK 10.0.22621 (installed) + MSVC 14.50 toolset (UBT bans 14.40-14.43; only 14.43 in VS2022 as of 2026-10-09)
+Currency -> Source/Nowaproba/Currency: UCurrencyComponent (on BP_TopDownCharacter as "Currency"), UCurrencyDebugWidget (top-right wallet, temp +/-100 buttons)
+MCP widget layout -> no tool edits UMG designer trees; build widget layouts in C++ (WidgetTree) instead
+Editor MCP -> .mcp.json -> unreal-mcp at http://127.0.0.1:8000/mcp (editor must be running); editor UI is Polish so node type_ids are localized (use find_node_types); save via AssetTools.save_assets; no tool calls functions/clicks in PIE
