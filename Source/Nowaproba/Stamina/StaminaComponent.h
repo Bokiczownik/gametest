@@ -59,7 +59,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Max", meta = (ClampMin = "1.0"))
-	float BaseMaxStamina = 100.f;
+	float BaseMaxStamina = 30.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Stamina|Max")
 	float MaxStaminaBonus = 0.f;
