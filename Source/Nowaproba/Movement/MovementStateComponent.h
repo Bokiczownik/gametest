@@ -28,7 +28,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSlideStateChanged, bool, bIsSlidi
  * One input flow: Ctrl while moving faster than SprintSpeedThreshold starts a slide, otherwise crouches;
  * jump while sliding cancels the slide, jump while crouched gives a small height boost.
  * The slide only swaps friction/braking/acceleration on the movement component for its duration, so its length
- * follows the real entry speed and speed limits stay in force. Ticks only while sliding or a jump boost is pending.
+ * follows the real entry speed and speed limits stay in force.
+ * Slopes (from the movement component's current floor, measured along the movement direction): running speed is
+ * scaled smoothly up/down hill, slides get a one-time downhill entry boost plus gravity along the slope, and the
+ * crouch-jump gets a one-time forward push. Everything is capped; ticks every frame for the smooth speed scaling.
  */
 UCLASS(ClassGroup = (Gameplay), meta = (BlueprintSpawnableComponent))
 class NOWAPROBA_API UMovementStateComponent : public UActorComponent
@@ -103,6 +106,46 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement State|Slide", meta = (ClampMin = "0.1"))
 	float SlideMaxDuration = 1.5f;
 
+	/** Slopes flatter than this (degrees, along the movement direction) count as flat ground. */
+	UPROPERTY(EditDefaultsOnly, Category = "Movement State|Slope", meta = (ClampMin = "0.0", ClampMax = "45.0"))
+	float SlopeDeadZoneAngle = 3.f;
+
+	/** Slope angle (degrees) at which slope effects reach full strength; steeper slopes are not stronger. */
+	UPROPERTY(EditDefaultsOnly, Category = "Movement State|Slope", meta = (ClampMin = "1.0", ClampMax = "89.0"))
+	float SlopeMaxInfluenceAngle = 25.f;
+
+	/** Running speed reduction at full uphill influence (0.1 = 10% slower). */
+	UPROPERTY(EditDefaultsOnly, Category = "Movement State|Slope", meta = (ClampMin = "0.0", ClampMax = "0.9"))
+	float UphillSpeedPenalty = 0.1f;
+
+	/** Running speed increase at full downhill influence (0.1 = 10% faster). */
+	UPROPERTY(EditDefaultsOnly, Category = "Movement State|Slope", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float DownhillSpeedBonus = 0.1f;
+
+	/** How fast the running speed multiplier eases toward its slope target (higher = snappier). */
+	UPROPERTY(EditDefaultsOnly, Category = "Movement State|Slope", meta = (ClampMin = "0.1"))
+	float SlopeSpeedInterpSpeed = 5.f;
+
+	/** Extra slide entry speed at full downhill influence (none uphill). Still capped by SlideMaxSpeed. */
+	UPROPERTY(EditDefaultsOnly, Category = "Movement State|Slope", meta = (ClampMin = "0.0"))
+	float SlideSlopeEntryBoost = 200.f;
+
+	/** Fraction of gravity pulling along the slope while sliding (speeds up downhill, slows uphill). */
+	UPROPERTY(EditDefaultsOnly, Category = "Movement State|Slope", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float SlideSlopeGravityScale = 0.5f;
+
+	/** One-time forward speed added to a crouch-jump at full downhill influence. */
+	UPROPERTY(EditDefaultsOnly, Category = "Movement State|Slope", meta = (ClampMin = "0.0"))
+	float CrouchJumpSlopeBoost = 150.f;
+
+	/** Fraction of CrouchJumpSlopeBoost applied when jumping uphill. */
+	UPROPERTY(EditDefaultsOnly, Category = "Movement State|Slope", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float CrouchJumpUphillBoostScale = 0.35f;
+
+	/** The crouch-jump slope boost never pushes horizontal speed above this. */
+	UPROPERTY(EditDefaultsOnly, Category = "Movement State|Slope", meta = (ClampMin = "0.0"))
+	float CrouchJumpMaxHorizontalSpeed = 1200.f;
+
 private:
 	UPROPERTY()
 	TObjectPtr<ACharacter> Character;
@@ -124,11 +167,25 @@ private:
 
 	float LastLandedTime = -1.f;
 
+	float SlideSpeedCap = 0.f;
+
+	/** Walk speed as set by others (e.g. sprint); the slope multiplier is applied on top of it. */
+	float BaseWalkSpeed = 0.f;
+	float LastWrittenWalkSpeed = 0.f;
+	float SlopeSpeedMultiplier = 1.f;
+
 	void StartSlide();
 	void EndSlide();
 	bool TryStandUpNow();
 	void RestoreJumpBoost();
-	void UpdateTickEnabled();
+	void UpdateSlopeSpeed(float DeltaTime);
+	void ApplySlideSlopeGravity(float DeltaTime);
+
+	/** Signed floor slope in degrees along Direction (positive = uphill); 0 when not on walkable ground. */
+	float GetSlopeAngleAlong(const FVector& Direction) const;
+
+	/** 0..1 strength of a slope angle after the dead zone, reaching 1 at SlopeMaxInfluenceAngle. */
+	float GetSlopeInfluence(float SlopeAngle) const;
 
 	UFUNCTION()
 	void HandleLanded(const FHitResult& Hit);
