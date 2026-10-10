@@ -92,11 +92,25 @@ void UMovementStateComponent::HandleJumpPressed()
 		return;
 	}
 
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (Movement->IsFalling())
+	{
+		// Remembered so a slightly early press still counts as a hop on touchdown.
+		LastAirJumpPressTime = Now;
+	}
+	// A buffered early press is on time by definition, whatever the frame rate.
+	const bool bInBhopWindow = Movement->IsMovingOnGround()
+		&& (bBufferedJumpPending || (LastLandedTime >= 0.f && Now - LastLandedTime <= BhopWindow));
+
 	if (bSliding)
 	{
 		EndSlide();
 		if (TryStandUpNow())
 		{
+			if (bInBhopWindow)
+			{
+				RegisterBhop();
+			}
 			Character->Jump();
 		}
 		return;
@@ -133,6 +147,10 @@ void UMovementStateComponent::HandleJumpPressed()
 		}
 	}
 
+	if (bInBhopWindow)
+	{
+		RegisterBhop();
+	}
 	Character->Jump();
 }
 
@@ -173,6 +191,15 @@ void UMovementStateComponent::TickComponent(float DeltaTime, ELevelTick TickType
 			RestoreJumpBoost();
 		}
 	}
+
+	// Buffered early press: Landed fires before the movement mode switches to walking, so jump on the next tick.
+	if (bBufferedJumpPending && Movement->IsMovingOnGround())
+	{
+		HandleJumpPressed();
+		bBufferedJumpPending = false;
+	}
+
+	UpdateBhop();
 
 	if (bSliding)
 	{
@@ -280,8 +307,54 @@ void UMovementStateComponent::UpdateSlopeSpeed(float DeltaTime)
 		SlopeSpeedMultiplier = Target;
 	}
 
-	LastWrittenWalkSpeed = BaseWalkSpeed * SlopeSpeedMultiplier;
+	LastWrittenWalkSpeed = BaseWalkSpeed * SlopeSpeedMultiplier * GetBhopMultiplier();
 	Movement->MaxWalkSpeed = LastWrittenWalkSpeed;
+}
+
+void UMovementStateComponent::RegisterBhop()
+{
+	if (bBhopUsedThisLanding || Movement->Velocity.Size2D() < BhopMinSpeed)
+	{
+		return;
+	}
+	bBhopUsedThisLanding = true;
+	SetBhopStacks(FMath::Min(BhopStacks + 1, BhopMaxStacks));
+
+	// Raise the speed cap now and give an instant push toward it, so each hop is felt immediately.
+	UpdateSlopeSpeed(0.f);
+	const FVector Planar(Movement->Velocity.X, Movement->Velocity.Y, 0.f);
+	const float Speed = Planar.Size();
+	const float NewSpeed = FMath::Max(Speed, FMath::Min(Speed + BaseWalkSpeed * BhopSpeedBonusPerStack, Movement->MaxWalkSpeed));
+	const FVector Boosted = Planar.GetSafeNormal() * NewSpeed;
+	Movement->Velocity = FVector(Boosted.X, Boosted.Y, Movement->Velocity.Z);
+}
+
+void UMovementStateComponent::SetBhopStacks(int32 NewStacks)
+{
+	if (NewStacks == BhopStacks)
+	{
+		return;
+	}
+
+	BhopStacks = NewStacks;
+	OnBhopStacksChanged.Broadcast(BhopStacks);
+}
+
+void UMovementStateComponent::UpdateBhop()
+{
+	if (BhopStacks == 0)
+	{
+		return;
+	}
+
+	const bool bTooSlow = Movement->Velocity.Size2D() < BhopMinSpeed;
+	const bool bMissedWindow = Movement->IsMovingOnGround() && !bBufferedJumpPending
+		&& (LastLandedTime < 0.f || GetWorld()->GetTimeSeconds() - LastLandedTime > BhopWindow);
+	if (bTooSlow || bMissedWindow)
+	{
+		// The higher speed cap goes away; ground friction then removes the extra speed.
+		SetBhopStacks(0);
+	}
 }
 
 void UMovementStateComponent::ApplySlideSlopeGravity(float DeltaTime)
@@ -327,6 +400,13 @@ float UMovementStateComponent::GetSlopeInfluence(float SlopeAngle) const
 void UMovementStateComponent::HandleLanded(const FHitResult& Hit)
 {
 	LastLandedTime = GetWorld()->GetTimeSeconds();
+	bBhopUsedThisLanding = false;
+	if (LastAirJumpPressTime >= 0.f && LastLandedTime - LastAirJumpPressTime <= BhopBufferTime)
+	{
+		bBufferedJumpPending = true;
+	}
+	LastAirJumpPressTime = -1.f;
+
 	if (bCrouchHeld)
 	{
 		Character->Crouch();
