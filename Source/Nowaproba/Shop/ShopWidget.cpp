@@ -8,14 +8,65 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Engine/GameViewportClient.h"
+#include "GameFramework/InputSettings.h"
+#include "GameFramework/PlayerController.h"
 
 void UShopWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
 	BuildLayout();
+	SetIsFocusable(true);
 	// Runs once per widget instance, so the button is bound exactly once.
 	CloseButton->OnClicked.AddUniqueDynamic(this, &UShopWidget::HandleCloseClicked);
+}
+
+void UShopWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	if (APlayerController* PC = GetOwningPlayer())
+	{
+		bPreviousShowMouseCursor = PC->bShowMouseCursor;
+		PC->bShowMouseCursor = true;
+
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PC->SetInputMode(InputMode);
+	}
+}
+
+void UShopWidget::NativeDestruct()
+{
+	if (APlayerController* PC = GetOwningPlayer())
+	{
+		PC->SetInputMode(FInputModeGameOnly());
+		PC->bShowMouseCursor = bPreviousShowMouseCursor;
+
+		// Game-only mode uses engine capture defaults; put back the project's viewport mouse settings.
+		if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+		{
+			const UInputSettings* Settings = GetDefault<UInputSettings>();
+			Viewport->SetMouseCaptureMode(Settings->DefaultViewportMouseCaptureMode);
+			Viewport->SetMouseLockMode(Settings->DefaultViewportMouseLockMode);
+		}
+	}
+
+	Super::NativeDestruct();
+}
+
+FReply UShopWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+	// Game input is paused while the shop has focus, so the interact key and Esc are handled here.
+	// Ignore auto-repeat so holding the E that opened the shop does not close it again.
+	if (!InKeyEvent.IsRepeat() && (InKeyEvent.GetKey() == EKeys::E || InKeyEvent.GetKey() == EKeys::Escape))
+	{
+		RemoveFromParent();
+		return FReply::Handled();
+	}
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 void UShopWidget::BuildLayout()
