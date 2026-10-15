@@ -1,6 +1,6 @@
 # Plan: reakcja trawy na ruch postaci i ataki
 
-Status: krok 1 (WPO + wiatr) ZROBIONY. Następny krok: 2 (RT + manager + interaktor na graczu).
+Status: kroki 1 i 2 ZROBIONE. Następny krok: 3 (lądowanie + DA_GrassInteractionProfile).
 Obowiązują zasady z CLAUDE.md (Blueprinty, bez nowych pluginów, commit po każdym kroku).
 
 ## Stan wyjściowy (gotowe)
@@ -55,6 +55,10 @@ Wartości liczbowe są startowe, do strojenia w PIE.
 ## Kroki (każdy = osobne zadanie + commit)
 Krok 1 wynik: MPC_GrassWind + WPO w M_Grass (formuła w PROJECT_MAP). W kroku 2 dodać offset interakcji do tego samego
 WPO (przed AppendVector: offsetXY_total = wind + interakcja, z liczone z sumy). Kontrola gamma R nadal niewykonana.
+Krok 2 wynik: RT_GrassInteraction/Prev, MPC_GrassInteraction, M_GrassRT_Decay/Copy, M_GrassBrush, BP_GrassInteractionManager,
+BP_GrassInteractorComponent (na BP_TopDownCharacter). Parametry ruchu są na razie zmiennymi komponentu (SpeedMax, Radius/Strength/FlattenMin-Max,
+MoveBias) - w kroku 3 przenieść do DA_GrassInteractionProfile. Pędzel to koło (bez wydłużenia kapsuły wzdłuż prędkości) - do dodania w kroku 3.
+Szczegóły i sposób weryfikacji: PROJECT_MAP.
 
 1. WPO + wiatr w M_Grass (parametry: siła/prędkość/kierunek wiatru, np. przez MPC). Przy okazji weryfikacja,
    że R dociera do UE liniowo (R ~ 0.5 w połowie źdźbła; kontrola gamma niewykonana w zadaniu importu).
