@@ -1,0 +1,64 @@
+GRASS - TODO: do sprawdzenia, do poprawy, do zrobienia
+Stan na koniec sesji: kroki 1-3 z Docs/GRASS_INTERACTION_PLAN.md zrobione. Szczegóły techniczne: Docs/PROJECT_MAP.txt.
+
+=== A. DO SPRAWDZENIA RĘCZNIE (najpierw) ===
+1. Ctrl+S w edytorze (Lvl_TopDown): aktorzy GrassArea_Test i GrassInteractionManager (folder GrassTest) nie są zapisani przez MCP.
+2. Play w Lvl_TopDown, trawa obok PlayerStart:
+   - chód / bieg: ślad za postacią, przy biegu szerszy i wydłużony do tyłu (kapsuła), powrót trawy ~1.5 s,
+   - slide: szeroki, mocno dociśnięty pas,
+   - skok z wysokości: pierścień trawy odgiętej na zewnątrz, większy przy wyższym upadku,
+   - w powietrzu postać nie rusza trawy.
+   (Niezweryfikowane automatycznie: slide i wydłużenie kapsuły.)
+3. Kontrola gamma koloru wierzchołków (R w połowie źdźbła ~0.5 w UE) - nigdy niewykonana.
+
+=== B. ZNANE PROBLEMY DO NAPRAWY ===
+B1. Migotanie trawy w cieniu (zgłoszone przez użytkownika).
+    Prawdopodobne przyczyny (sprawdzać po kolei, jedna zmiana na raz):
+    a) Virtual Shadow Maps + WPO: animowana trawa unieważnia cache cieni co klatkę albo cień jest liczony z nieruchomej
+       geometrii. Na HISM w BP_GrassArea ustawić "Shadow Cache Invalidation Behavior" = Always (lub Rigid) i porównać.
+       Test: konsola r.Shadow.Virtual.Enable 0 - jeśli migotanie znika, przyczyna jest tu.
+    b) TAA/TSR bez wektorów ruchu dla WPO: w Project Settings sprawdzić "Output velocities due to vertex deformation"
+       (r.Velocity.EnableVertexDeformation=1). Test: r.AntiAliasingMethod 0 - jeśli znika, przyczyna jest tu.
+    c) Lumen/odbicia na cienkich, dwustronnych źdźbłach w cieniu (normalna world-space (0,0,1) dla obu stron):
+       test r.Lumen.DiffuseIndirect.Allow 0.
+    d) Tylko w edytorze: viewport w tle renderuje z niskim fps - sprawdzić w Play/Standalone, czy problem zostaje.
+    Po znalezieniu przyczyny zapisać wynik w PROJECT_MAP.
+
+B2. Za słaba reakcja trawy na ruch, szczególnie na upadek. Proponowane wartości startowe (do strojenia w Play):
+    MPC_GrassInteraction: BendCm 30 -> 45, FlattenCm 12 -> 20.
+    DA_GrassInteractionProfile:
+      Ruch:      StrengthMin 0.4 -> 0.6, RadiusMin 35 -> 45, FlattenMax 0.6 -> 0.75
+      Lądowanie: LandDuration 0.15 -> 0.35, LandStrengthMin 0.4 -> 0.7, LandRadiusMin 60 -> 90,
+                 LandRadiusMax 300 -> 350, LandFlatten 0.5 -> 0.85, LandSpeedMin 400 -> 300
+    BP_GrassInteractionManager: RecoverTime 1.5 -> 2.0 (dłużej widoczny ślad).
+    UWAGA: przy BendCm > 30 zwiększyć bounds extension wszystkich SM_Grass* (teraz +-30 cm XY) do ok. BendCm + 10,
+    inaczej wygięta trawa będzie znikać na krawędziach ekranu.
+
+B3. Trawa zbyt monotonna. Opcje (od najtańszej):
+    1) [ZALECANE NA START] Wariacja w M_Grass bez nowych assetów:
+       - duże plamy koloru: szum world-space o niskiej częstotliwości (np. skala 5-10 m) mieszający 2-3 odcienie czubka
+         (żółtawy / soczysty / chłodniejszy zielony),
+       - mocniejsza wariacja per instancja (VariationMin/Max 0.85-1.15 -> np. 0.75-1.2) i lekkie przesunięcie odcienia,
+       - delikatniejszy gradient nasada->czubek (np. nasada jaśniejsza niż teraz #2E5A1C; dociśnięta trawa robi się zbyt ciemna),
+       - parametry wystawić przez Material Instance (MI_Grass_Default), żeby stroić bez rekompilacji.
+    2) Nowe warianty meshy w Tools/Blender/grass_generator.py (parametry): kępka wysoka i rzadka, kępka niska i gęsta,
+       ewentualnie źdźbła o innej szerokości; dodać jako kolejne HISM w BP_GrassArea z wagami losowania.
+    3) Drugi materiał / kwiatki / chwasty jako osobne meshe - dopiero gdy 1) i 2) nie wystarczą.
+    Decyzja należy do użytkownika; rekomendacja: najpierw 1), potem ewentualnie 2).
+
+=== C. DO ZROBIENIA (kolejne zadania) ===
+C1. Krok 4 planu: AddGrassImpulse(Location, Radius, Direction, Strength, Shape) w BP_GrassInteractionManager
+    (koło/łuk/stożek, siła ataku skaluje promień), wywołania z ataków; BP_GrassInteractorComponent na NPC/wrogach
+    (pamiętać o przypisaniu Profile na szablonie komponentu - domyślne wartości nie przechodzą same).
+C2. Dash: gdy powstanie w grze - pola Dash* w BP_GrassInteractionProfile i stan w UpdateBrush.
+C3. LOD1 kępek: przypisać SM_GrassClump_X_LOD1 jako LOD1 do SM_GrassClump_X (Static Mesh Editor -> LOD Import);
+    MCP tego nie umie. Potem usunąć osobne assety _LOD1 lub zostawić jako źródło.
+C4. BP_GrassArea: trace do podłoża (teraz trawa stoi płasko na z=0 aktora - na rampach wisi/zapada się).
+C5. Wydajność przy większych łąkach: cull distance HISM (3000-4000) dobrać do kamery, rozważyć
+    "World Position Offset Disable Distance" na HISM, sprawdzić koszt w Stat GPU.
+C6. Manager śledzi tylko GetPlayerPawn(0) - przy innym trybie gry (co-op, kamera niezależna od postaci) do zmiany.
+
+=== D. PORZĄDKI / INNE ===
+D1. .gitignore nie wyklucza *.blend (i *.glb) - SourceArt/ widoczne jako nieśledzone; dodać wpisy (decyzja użytkownika).
+D2. CLAUDE.md mówi "Blueprint-only", a projekt ma kod C++ (Source/Nowaproba) - zaktualizować regułę.
+D3. Testowe aktory w Lvl_TopDown (folder GrassTest) usunąć, gdy trawa trafi na docelowe mapy.
