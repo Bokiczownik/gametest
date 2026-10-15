@@ -88,3 +88,10 @@ F2. Podłoże pod trawą: decal (M_GroundGrass w BP_GrassArea) wypróbowany i US
     malował ściany/platformy). [ZROBIONE] Zamiast tego: M_GroundGrass / MI_GroundGrass_Floor na podłodze Floor w Lvl_TopDown
     (plamy ciemnej/jasnej zieleni, piasek, błoto; strojenie w MI). Obejmuje całą podłogę poziomu. Docelowo: moduły podłogi
     "trawa" w nowych poziomach z tym samym MI. Ctrl+S w Lvl_TopDown (override materiału na Floor).
+
+=== G. Wydajność (2026-10-16) ===
+G1. [ZROBIONE] Kolor M_Grass liczony per wierzchołek (VertexInterpolator), WPO Disable Distance 1800 cm na wszystkich obszarach.
+G2. Efektywna gęstość ogranicza MaxInstances (4000-5000 na obszar 64 m2 => ok. 60-80 kępek/m2 mimo Density 100-300).
+G3. DO ZROBIENIA: LOD1 kępek (C3, ręcznie), potem ustawić progi LOD (set_lod_thresholds) - największy zysk.
+G4. Do rozważenia: cull distance HISM (3000-4000) dopasować do kamery gry; tańsze kępki (szersze źdźbła) z generatora;
+    pomiar stat unit / stat gpu przed i po zmianach.
