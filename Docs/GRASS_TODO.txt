@@ -1,5 +1,5 @@
 GRASS - TODO: do sprawdzenia, do poprawy, do zrobienia
-Stan na koniec sesji: kroki 1-3 z Docs/GRASS_INTERACTION_PLAN.md zrobione. Szczegóły techniczne: Docs/PROJECT_MAP.txt.
+Stan: kroki 1-3 z Docs/GRASS_INTERACTION_PLAN.md zrobione. Sesja 2026-10-16: B2, B3(opcja 1), C4, C5 zrobione; B1 częściowo (patrz niżej). Szczegóły techniczne: Docs/PROJECT_MAP.txt.
 
 === A. DO SPRAWDZENIA RĘCZNIE (najpierw) ===
 1. Ctrl+S w edytorze (Lvl_TopDown): aktorzy GrassArea_Test i GrassInteractionManager (folder GrassTest) nie są zapisani przez MCP.
@@ -12,7 +12,12 @@ Stan na koniec sesji: kroki 1-3 z Docs/GRASS_INTERACTION_PLAN.md zrobione. Szcze
 3. Kontrola gamma koloru wierzchołków (R w połowie źdźbła ~0.5 w UE) - nigdy niewykonana.
 
 === B. ZNANE PROBLEMY DO NAPRAWY ===
-B1. Migotanie trawy w cieniu (zgłoszone przez użytkownika).
+B1. Migotanie trawy w cieniu (zgłoszone przez użytkownika). [CZĘŚCIOWO 2026-10-16]
+    Zrobione: HISM w BP_GrassArea -> bAffectDynamicIndirectLighting=false, bAffectDistanceFieldLighting=false,
+    bCastContactShadow=false (trawa nie wpływa na Lumen/DF), SM_Grass* bGenerateMeshDistanceField=false.
+    NIE zweryfikowane (MCP nie umie zmieniać cvarów ani ocenić migotania) - sprawdzić w Play; jeśli zostaje, testy a)-d).
+    UWAGA: obszary trawy postawione wcześniej przez użytkownika (GrassArea_Test2..8 itd.) NIE mają tych flag ani WPO disable
+    distance (flagi bool z szablonu nie przechodzą na postawione instancje) - postawić je ponownie albo ustawić w Details.
     Prawdopodobne przyczyny (sprawdzać po kolei, jedna zmiana na raz):
     a) Virtual Shadow Maps + WPO: animowana trawa unieważnia cache cieni co klatkę albo cień jest liczony z nieruchomej
        geometrii. Na HISM w BP_GrassArea ustawić "Shadow Cache Invalidation Behavior" = Always (lub Rigid) i porównać.
@@ -24,7 +29,8 @@ B1. Migotanie trawy w cieniu (zgłoszone przez użytkownika).
     d) Tylko w edytorze: viewport w tle renderuje z niskim fps - sprawdzić w Play/Standalone, czy problem zostaje.
     Po znalezieniu przyczyny zapisać wynik w PROJECT_MAP.
 
-B2. Za słaba reakcja trawy na ruch, szczególnie na upadek. Proponowane wartości startowe (do strojenia w Play):
+B2. Za słaba reakcja trawy na ruch, szczególnie na upadek. [ZROBIONE 2026-10-16: wszystkie wartości poniżej ustawione, bounds +-55 cm;
+    RecoverTime 2.0 ustawione też na postawionym GrassInteractionManager] Wartości:
     MPC_GrassInteraction: BendCm 30 -> 45, FlattenCm 12 -> 20.
     DA_GrassInteractionProfile:
       Ruch:      StrengthMin 0.4 -> 0.6, RadiusMin 35 -> 45, FlattenMax 0.6 -> 0.75
@@ -34,7 +40,9 @@ B2. Za słaba reakcja trawy na ruch, szczególnie na upadek. Proponowane wartoś
     UWAGA: przy BendCm > 30 zwiększyć bounds extension wszystkich SM_Grass* (teraz +-30 cm XY) do ok. BendCm + 10,
     inaczej wygięta trawa będzie znikać na krawędziach ekranu.
 
-B3. Trawa zbyt monotonna. Opcje (od najtańszej):
+B3. Trawa zbyt monotonna. [OPCJA 1 ZROBIONA 2026-10-16: M_Grass + MI_Grass_Default (przypisany do SM_Grass*): plamy z szumu
+    world-space (PatchScale 0.0012, PatchStrength 0.6) mieszające TipColor z TipColorDry, VariationMin/Max 0.75/1.2, jaśniejsza
+    nasada. Strojenie kolorów w MI_Grass_Default.] Opcje (od najtańszej):
     1) [ZALECANE NA START] Wariacja w M_Grass bez nowych assetów:
        - duże plamy koloru: szum world-space o niskiej częstotliwości (np. skala 5-10 m) mieszający 2-3 odcienie czubka
          (żółtawy / soczysty / chłodniejszy zielony),
@@ -53,8 +61,9 @@ C1. Krok 4 planu: AddGrassImpulse(Location, Radius, Direction, Strength, Shape) 
 C2. Dash: gdy powstanie w grze - pola Dash* w BP_GrassInteractionProfile i stan w UpdateBrush.
 C3. LOD1 kępek: przypisać SM_GrassClump_X_LOD1 jako LOD1 do SM_GrassClump_X (Static Mesh Editor -> LOD Import);
     MCP tego nie umie. Potem usunąć osobne assety _LOD1 lub zostawić jako źródło.
-C4. BP_GrassArea: trace do podłoża (teraz trawa stoi płasko na z=0 aktora - na rampach wisi/zapada się).
-C5. Wydajność przy większych łąkach: cull distance HISM (3000-4000) dobrać do kamery, rozważyć
+C4. [ZROBIONE 2026-10-16] BP_GrassArea: line trace (Visibility, +300/-1000 cm) per kępka, instancje w world space
+    (jednolita skala niezależnie od skali aktora), liczba kępek liczona ze skalowanego Boxa (Density na m2 świata).
+C5. [CZĘŚCIOWO 2026-10-16: World Position Offset Disable Distance = 4000 na HISM szablonu] Wydajność przy większych łąkach: cull distance HISM (3000-4000) dobrać do kamery, rozważyć
     "World Position Offset Disable Distance" na HISM, sprawdzić koszt w Stat GPU.
 C6. Manager śledzi tylko GetPlayerPawn(0) - przy innym trybie gry (co-op, kamera niezależna od postaci) do zmiany.
 
@@ -62,3 +71,9 @@ C6. Manager śledzi tylko GetPlayerPawn(0) - przy innym trybie gry (co-op, kamer
 D1. .gitignore nie wyklucza *.blend (i *.glb) - SourceArt/ widoczne jako nieśledzone; dodać wpisy (decyzja użytkownika).
 D2. CLAUDE.md mówi "Blueprint-only", a projekt ma kod C++ (Source/Nowaproba) - zaktualizować regułę.
 D3. Testowe aktory w Lvl_TopDown (folder GrassTest) usunąć, gdy trawa trafi na docelowe mapy.
+
+=== E. NOWE (2026-10-16) ===
+E1. GrassArea_Test odtworzony (usunięty i postawiony ponownie, ta sama transformacja, Density przywrócone na 100 jak w innych
+    obszarach). Inne ustawienia per instancja starego aktora (np. Seed, Scale, MaxInstances) - jeśli były zmienione - przepadły.
+E2. Obszary z Density 100 trafiają w limit MaxInstances (4000) - przy większych obszarach podnieść MaxInstances lub dzielić obszar.
+E3. Ctrl+S w Lvl_TopDown po tej sesji (nowy GrassArea_Test, RecoverTime managera).
