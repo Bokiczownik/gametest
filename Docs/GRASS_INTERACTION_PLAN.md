@@ -1,6 +1,6 @@
 # Plan: reakcja trawy na ruch postaci i ataki
 
-Status: plan zatwierdzony kierunkowo, implementacja NIE rozpoczęta. Następny krok: 1 (WPO + wiatr).
+Status: krok 1 (WPO + wiatr) ZROBIONY. Następny krok: 2 (RT + manager + interaktor na graczu).
 Obowiązują zasady z CLAUDE.md (Blueprinty, bez nowych pluginów, commit po każdym kroku).
 
 ## Stan wyjściowy (gotowe)
@@ -53,6 +53,9 @@ Obowiązują zasady z CLAUDE.md (Blueprinty, bez nowych pluginów, commit po ka�
 Wartości liczbowe są startowe, do strojenia w PIE.
 
 ## Kroki (każdy = osobne zadanie + commit)
+Krok 1 wynik: MPC_GrassWind + WPO w M_Grass (formuła w PROJECT_MAP). W kroku 2 dodać offset interakcji do tego samego
+WPO (przed AppendVector: offsetXY_total = wind + interakcja, z liczone z sumy). Kontrola gamma R nadal niewykonana.
+
 1. WPO + wiatr w M_Grass (parametry: siła/prędkość/kierunek wiatru, np. przez MPC). Przy okazji weryfikacja,
    że R dociera do UE liniowo (R ~ 0.5 w połowie źdźbła; kontrola gamma niewykonana w zadaniu importu).
 2. RT (2x ping-pong) + MPC_GrassInteraction + BP_GrassInteractionManager + GrassInteractorComponent na graczu;
