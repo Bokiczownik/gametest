@@ -84,9 +84,5 @@ F1. Migotanie (B1) - wyniki testów użytkownika: migocze TYLKO w cieniu ścian;
     Próba: normalna * TwoSidedSign w M_Grass -> gorzej (silnik NIE odwraca normalnej world-space), cofnięte.
     Odłożone na prośbę użytkownika. Następne hipotezy: cień ściany (VSM/CSM) na cienkiej geometrii WPO vs. TSR history;
     sprawdzić bez WPO w ogóle (odłączyć WPO w M_Grass), r.Shadow.Virtual.Clipmap / cień ściany przez kaskady, Contact Shadows światła.
-F2. [ZROBIONE] Podłoże pod trawą: decal M_GroundGrass/MI_GroundGrass_Default w każdym BP_GrassArea (ciemnozielone, plamy,
-    miękkie krawędzie). Kolory/plamy/krawędź stroić w MI_GroundGrass_Default. Decal maluje też ściany/obiekty w obrębie
-    Decal = dokładnie Box obszaru, głębokość +-50 cm od podłoża (trace w środku obszaru), maluje tylko powierzchnie
-    poziome/rampy (maska nachylenia FlatThreshold w MI), EdgeFade 0.03; trawa i gracz go nie przyjmują. Podłoże w obrębie
-    Boxa bez trawy (np. pas między ścianami) też zostanie zabarwione - wtedy zmniejszyć Box obszaru. NPC/wrogowie: ustawić bReceivesDecals=false na meshu.
-    Ctrl+S w Lvl_TopDown (GroundMaterial ustawiony na wszystkich obszarach).
+F2. Podłoże pod trawą: decal (M_GroundGrass w BP_GrassArea) wypróbowany i USUNIĘTY na prośbę użytkownika (wystawał,
+    malował ściany/platformy). Do wyboru inne rozwiązanie podłoża - patrz propozycje w rozmowie / kolejne zadanie.
