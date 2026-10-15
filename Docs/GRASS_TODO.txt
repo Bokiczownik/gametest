@@ -85,4 +85,6 @@ F1. Migotanie (B1) - wyniki testów użytkownika: migocze TYLKO w cieniu ścian;
     Odłożone na prośbę użytkownika. Następne hipotezy: cień ściany (VSM/CSM) na cienkiej geometrii WPO vs. TSR history;
     sprawdzić bez WPO w ogóle (odłączyć WPO w M_Grass), r.Shadow.Virtual.Clipmap / cień ściany przez kaskady, Contact Shadows światła.
 F2. Podłoże pod trawą: decal (M_GroundGrass w BP_GrassArea) wypróbowany i USUNIĘTY na prośbę użytkownika (wystawał,
-    malował ściany/platformy). Do wyboru inne rozwiązanie podłoża - patrz propozycje w rozmowie / kolejne zadanie.
+    malował ściany/platformy). [ZROBIONE] Zamiast tego: M_GroundGrass / MI_GroundGrass_Floor na podłodze Floor w Lvl_TopDown
+    (plamy ciemnej/jasnej zieleni, piasek, błoto; strojenie w MI). Obejmuje całą podłogę poziomu. Docelowo: moduły podłogi
+    "trawa" w nowych poziomach z tym samym MI. Ctrl+S w Lvl_TopDown (override materiału na Floor).
