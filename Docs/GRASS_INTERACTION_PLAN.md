@@ -1,6 +1,6 @@
 # Plan: reakcja trawy na ruch postaci i ataki
 
-Status: kroki 1 i 2 ZROBIONE. Następny krok: 3 (lądowanie + DA_GrassInteractionProfile).
+Status: kroki 1-3 ZROBIONE. Następny krok: 4 (AddGrassImpulse dla ataków + komponent na NPC/wrogach).
 Obowiązują zasady z CLAUDE.md (Blueprinty, bez nowych pluginów, commit po każdym kroku).
 
 ## Stan wyjściowy (gotowe)
@@ -59,6 +59,9 @@ Krok 2 wynik: RT_GrassInteraction/Prev, MPC_GrassInteraction, M_GrassRT_Decay/Co
 BP_GrassInteractorComponent (na BP_TopDownCharacter). Parametry ruchu są na razie zmiennymi komponentu (SpeedMax, Radius/Strength/FlattenMin-Max,
 MoveBias) - w kroku 3 przenieść do DA_GrassInteractionProfile. Pędzel to koło (bez wydłużenia kapsuły wzdłuż prędkości) - do dodania w kroku 3.
 Szczegóły i sposób weryfikacji: PROJECT_MAP.
+Krok 3 wynik: DA_GrassInteractionProfile (klasa BP_GrassInteractionProfile), lądowanie z prędkości spadania (pierścień), slide z
+MovementStateComponent.IsSliding, pędzel-kapsuła (Stretch). Dash: brak w grze - gdy powstanie, dodać pola Dash* do profilu i stan w UpdateBrush.
+Niezweryfikowane w PIE: slide i wydłużenie kapsuły (PIE w tle nie da się poruszać prędkością) - sprawdzić ręcznie.
 
 1. WPO + wiatr w M_Grass (parametry: siła/prędkość/kierunek wiatru, np. przez MPC). Przy okazji weryfikacja,
    że R dociera do UE liniowo (R ~ 0.5 w połowie źdźbła; kontrola gamma niewykonana w zadaniu importu).
