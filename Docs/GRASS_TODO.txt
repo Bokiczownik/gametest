@@ -86,5 +86,6 @@ F1. Migotanie (B1) - wyniki testów użytkownika: migocze TYLKO w cieniu ścian;
     sprawdzić bez WPO w ogóle (odłączyć WPO w M_Grass), r.Shadow.Virtual.Clipmap / cień ściany przez kaskady, Contact Shadows światła.
 F2. [ZROBIONE] Podłoże pod trawą: decal M_GroundGrass/MI_GroundGrass_Default w każdym BP_GrassArea (ciemnozielone, plamy,
     miękkie krawędzie). Kolory/plamy/krawędź stroić w MI_GroundGrass_Default. Decal maluje też ściany/obiekty w obrębie
-    obszaru (do +-300 cm od aktora); trawa i gracz go nie przyjmują. NPC/wrogowie: ustawić bReceivesDecals=false na meshu.
+    obszaru (do +-300 cm od podłoża wykrytego trace'em w środku obszaru); decal +25 cm (lokalnie) szerszy niż Box,
+    EdgeFade 0.03; trawa i gracz go nie przyjmują. NPC/wrogowie: ustawić bReceivesDecals=false na meshu.
     Ctrl+S w Lvl_TopDown (GroundMaterial ustawiony na wszystkich obszarach).
