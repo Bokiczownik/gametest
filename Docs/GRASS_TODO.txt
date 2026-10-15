@@ -77,3 +77,14 @@ E1. GrassArea_Test odtworzony (usunięty i postawiony ponownie, ta sama transfor
     obszarach). Inne ustawienia per instancja starego aktora (np. Seed, Scale, MaxInstances) - jeśli były zmienione - przepadły.
 E2. Obszary z Density 100 trafiają w limit MaxInstances (4000) - przy większych obszarach podnieść MaxInstances lub dzielić obszar.
 E3. Ctrl+S w Lvl_TopDown po tej sesji (nowy GrassArea_Test, RecoverTime managera).
+
+=== F. 2026-10-16 (druga część) ===
+F1. Migotanie (B1) - wyniki testów użytkownika: migocze TYLKO w cieniu ścian; NIE pomaga: ShortRangeAO 0, Lumen DiffuseIndirect 0,
+    VSM SMRT 0, VSM off, wiatr 0. r.AntiAliasingMethod 2 (TAA) najlepiej (rozmyte jaśniejsze plamy), inne AA gorzej.
+    Próba: normalna * TwoSidedSign w M_Grass -> gorzej (silnik NIE odwraca normalnej world-space), cofnięte.
+    Odłożone na prośbę użytkownika. Następne hipotezy: cień ściany (VSM/CSM) na cienkiej geometrii WPO vs. TSR history;
+    sprawdzić bez WPO w ogóle (odłączyć WPO w M_Grass), r.Shadow.Virtual.Clipmap / cień ściany przez kaskady, Contact Shadows światła.
+F2. [ZROBIONE] Podłoże pod trawą: decal M_GroundGrass/MI_GroundGrass_Default w każdym BP_GrassArea (ciemnozielone, plamy,
+    miękkie krawędzie). Kolory/plamy/krawędź stroić w MI_GroundGrass_Default. Decal maluje też ściany/obiekty w obrębie
+    obszaru (do +-300 cm od aktora); trawa i gracz go nie przyjmują. NPC/wrogowie: ustawić bReceivesDecals=false na meshu.
+    Ctrl+S w Lvl_TopDown (GroundMaterial ustawiony na wszystkich obszarach).
