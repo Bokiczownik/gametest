@@ -59,7 +59,7 @@ C1. Krok 4 planu: AddGrassImpulse(Location, Radius, Direction, Strength, Shape) 
     (koło/łuk/stożek, siła ataku skaluje promień), wywołania z ataków; BP_GrassInteractorComponent na NPC/wrogach
     (pamiętać o przypisaniu Profile na szablonie komponentu - domyślne wartości nie przechodzą same).
 C2. Dash: gdy powstanie w grze - pola Dash* w BP_GrassInteractionProfile i stan w UpdateBrush.
-C3. LOD1 kępek: przypisać SM_GrassClump_X_LOD1 jako LOD1 do SM_GrassClump_X (Static Mesh Editor -> LOD Import);
+C3. [ZROBIONE, patrz G3] LOD1 kępek: przypisać SM_GrassClump_X_LOD1 jako LOD1 do SM_GrassClump_X (Static Mesh Editor -> LOD Import);
     MCP tego nie umie. Potem usunąć osobne assety _LOD1 lub zostawić jako źródło.
 C4. [ZROBIONE 2026-10-16] BP_GrassArea: line trace (Visibility, +300/-1000 cm) per kępka, instancje w world space
     (jednolita skala niezależnie od skali aktora), liczba kępek liczona ze skalowanego Boxa (Density na m2 świata).
@@ -92,6 +92,7 @@ F2. Podłoże pod trawą: decal (M_GroundGrass w BP_GrassArea) wypróbowany i US
 === G. Wydajność (2026-10-16) ===
 G1. [ZROBIONE] Kolor M_Grass liczony per wierzchołek (VertexInterpolator), WPO Disable Distance 1800 cm na wszystkich obszarach.
 G2. Efektywna gęstość ogranicza MaxInstances (4000-5000 na obszar 64 m2 => ok. 60-80 kępek/m2 mimo Density 100-300).
-G3. DO ZROBIENIA: LOD1 kępek (C3, ręcznie), potem ustawić progi LOD (set_lod_thresholds) - największy zysk.
+G3. [ZROBIONE] LOD1 kępek zaimportowany przez użytkownika, slot Material_0 -> MI_Grass_Default, progi LOD [1.0, 0.22].
+    Osobne assety SM_GrassClump_X_LOD1 nieużywane - można usunąć (decyzja użytkownika). Przy zmianie kamery przeliczyć progi.
 G4. Do rozważenia: cull distance HISM (3000-4000) dopasować do kamery gry; tańsze kępki (szersze źdźbła) z generatora;
     pomiar stat unit / stat gpu przed i po zmianach.
