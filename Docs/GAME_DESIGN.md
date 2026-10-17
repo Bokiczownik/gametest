@@ -51,10 +51,11 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Drzewa i kamienie są tylko dekoracją (bez niszczenia i zbierania), żeby gracz nie mylił się, co da się zebrać.
 - Oprócz waluty są surowce. Mają dawać różnorodność i zmuszać do planowania runu: czasu na mapie nie starcza na zebranie wszystkiego, więc gracz wybiera, co zbiera, pod planowany build.
 - Surowce muszą być wyraźnie odróżnialne od dekoracji.
-- Propozycja (do potwierdzenia), pasuje do 3 surowców w UResourceComponent:
-  - **Waluta (złoto):** beczki, wrogowie, skrzynie; ceny w sklepie, zapłata za wyjście bez klucza.
-  - **3 surowce jako świecące złoża w różnych kolorach** (rozbijane atakiem, wyraźnie inne niż kamienie), każdy przypisany do gałęzi ulepszeń, np. czerwony: atak, niebieski: przetrwanie, zielony: ruch.
-  - Przedmioty w sklepie kosztują walutę plus surowiec swojej gałęzi.
+- Pasuje do 3 surowców w UResourceComponent:
+  - **Waluta (złoto):** beczki, wrogowie, skrzynie; jedyna cena przedmiotów w sklepie, zapłata za wyjście bez klucza.
+  - **3 surowce jako świecące złoża w różnych kolorach** (rozbijane atakiem, wyraźnie inne niż kamienie), każdy przypisany do gałęzi ulepszeń umiejętności: czerwony: atak, niebieski: przetrwanie, zielony: ruch.
+  - Przedmioty w sklepie nie wymagają surowców. Surowce służą tylko do ulepszeń umiejętności swojej gałęzi.
+  - Przykłady ulepszeń: ruch: podwójny skok, dash; przetrwanie: blok tarczą.
   - Złoża w ręcznie postawionych punktach o różnej trudności dostępu (wysoko, pod mostem, w mgle); rzadsze surowce częściej w trudnych miejscach.
   - Podgląd następnej mapy w sklepie pokazuje, których surowców będzie więcej, a przedmiot zwiększający ilość surowca pozwala to zmienić.
 
@@ -75,8 +76,8 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Kamera trzecioosobowa z możliwością obrotu dookoła postaci i lekkiej zmiany kąta.
 - Kamera musi pokazywać gracza i teren wokół niego przez zasłaniające obiekty (np. przenikanie lub wycinanie geometrii).
 - Podstawowy ruch: sprint, slide (już w grze), skok.
-- Podwójny skok: do kupienia w sklepie.
-- Dash: do ustalenia, czy jest przedmiotem ze sklepu zastępującym slide (propozycja), czy zastępuje slide od początku.
+- Podwójny skok i dash: ulepszenia ruchu kupowane za surowiec ruchu (zielony).
+- Dash zastępuje slide czy działa obok niego: do ustalenia.
 - Wysokości struktur i trudno dostępnych miejsc nie są teraz priorytetem; na końcu można je dopasować, dodając półki i inne elementy otoczenia do wskakiwania.
 
 ## Na później
@@ -85,8 +86,8 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 
 ## Otwarte kwestie
 - Odległość i zakres kąta kamery (zza pleców czy wyżej, nad postacią).
-- Dash: przedmiot ze sklepu zamiast slide czy od początku zamiast slide.
-- Rodzaje surowców i ich zastosowanie: potwierdzić propozycję z sekcji Zasoby (złoża w kolorach, gałęzie ulepszeń).
+- Dash: zastępuje slide czy działa obok niego.
+- Gdzie i jak kupuje się ulepszenia umiejętności (na mapie sklepu obok przedmiotów?) oraz pełna lista ulepszeń w każdej gałęzi.
 - Lista zawartości mapy, a z niej docelowa skala map.
 - Długość runu i liczba map.
 
