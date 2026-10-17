@@ -12,7 +12,9 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Na mapie sklepu kilku NPC, każdy z własnym sklepem (szczegóły później).
 - Śmierć oznacza nowy run. Wyjątek: przedmiot dający drugie życie.
 - Jedna mapa: 10–15 min, dłużej, jeśli gracz zostaje po rozprzestrzenieniu się mgły i poluje na trudniejszych przeciwników.
-- Liczba map w runie: do ustalenia (przy 10–15 min na mapę run szybko się wydłuża).
+- Run dzieli się na etapy. Etap to 4 mapy (do ok. 15 min każda), a na końcu etapu jest główny boss.
+- Liczba etapów w runie: do ustalenia.
+- Zapis automatyczny i bardzo częsty, nie tylko przy zmianie mapy czy instancji. Implementacja na sam koniec.
 - Sklep może pokazywać podgląd następnej mapy (biom, modyfikator), żeby było pod co planować zakupy (propozycja).
 
 ## Mapy
@@ -28,7 +30,7 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
   - 2–3 mniejsze instancje, każda z elitą i mniejszym skarbem (np. wieża, hall, loch).
 - **Mniejsze struktury i znajdźki** rozłożone po reszcie mapy.
 - **Złoża surowców:** losowo 1–3 złoża każdego z 3 rodzajów.
-- **Skrzynie:** ok. 10 losowych, 2 gwarantowane rzadsze, 5 mgielnych.
+- **Skrzynie (osobne pule):** ok. 10 losowych, 2 gwarantowane rzadsze, 5 mgielnych.
 - **Beczki i podobne obiekty:** 70–90; nie z każdej coś wypada.
 - **Miejsca na klucz:** 5–6, zawsze w głównej strukturze lub w jej pobliżu.
 
@@ -100,7 +102,7 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Odległość i zakres kąta kamery (zza pleców czy wyżej, nad postacią).
 - Sklep i ulepszenia umiejętności (na później): pełna lista ulepszeń w każdej gałęzi, podział między NPC.
 - Docelowa skala map (z listy zawartości).
-- Liczba map w runie.
+- Liczba etapów w runie.
 
 ## Proponowana kolejność prac
 1. Kamera (obrót, kąt, widoczność przez obiekty): zrobione na Lvl_CameraTest.
