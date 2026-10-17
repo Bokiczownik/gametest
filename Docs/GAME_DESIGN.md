@@ -11,7 +11,8 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Seria map. Między mapami jest mapa ze sklepem (zakup ulepszeń), potem kolejna mapa.
 - Na mapie sklepu kilku NPC, każdy z własnym sklepem (szczegóły później).
 - Śmierć oznacza nowy run. Wyjątek: przedmiot dający drugie życie.
-- Propozycja do weryfikacji: 4–5 map po 4–6 min, cały run 20–30 min.
+- Jedna mapa: 10–15 min, dłużej, jeśli gracz zostaje po rozprzestrzenieniu się mgły i poluje na trudniejszych przeciwników.
+- Liczba map w runie: do ustalenia (przy 10–15 min na mapę run szybko się wydłuża).
 - Sklep może pokazywać podgląd następnej mapy (biom, modyfikator), żeby było pod co planować zakupy (propozycja).
 
 ## Mapy
@@ -19,13 +20,23 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Kilka map na etap, z których losuje się jedną, plus modyfikatory mapy (propozycja).
 - Kilka poziomów w pionie: pod mostem (np. skrzynia), na moście (parkour po zawalonych elementach), ukryte miejsca wysoko (np. 100 m nad mostem).
 - Dostęp do trudnych miejsc ogranicza trudność dotarcia (np. wysokość skoku z modyfikatorów), a nie brak konkretnego przedmiotu.
-- Skala map: do ustalenia. Obecny Lvl_Landscape (2 km) służy tylko do testów. Docelową skalę wyznaczy lista zawartości mapy (struktury, zasoby, punkty).
+- Skala map: do ustalenia. Obecny Lvl_Landscape (2 km) służy tylko do testów. Docelową skalę wyznaczy lista zawartości mapy (poniżej).
+
+### Zawartość jednej mapy
+- **Główna struktura:** zawsze jedna bardzo duża (np. zamek na środku mapy).
+  - W jej centrum opcjonalny boss strzegący głównego skarbu.
+  - 2–3 mniejsze instancje, każda z elitą i mniejszym skarbem (np. wieża, hall, loch).
+- **Mniejsze struktury i znajdźki** rozłożone po reszcie mapy.
+- **Złoża surowców:** losowo 1–3 złoża każdego z 3 rodzajów.
+- **Skrzynie:** ok. 10 losowych, 2 gwarantowane rzadsze, 5 mgielnych.
+- **Beczki i podobne obiekty:** 70–90; nie z każdej coś wypada.
+- **Miejsca na klucz:** 5–6, zawsze w głównej strukturze lub w jej pobliżu.
 
 ## Wyjście z mapy
 - Nieoznaczone na starcie, losowane z kilku możliwych miejsc.
 - Jedno wyjście i jeden klucz na mapę.
 - Do wyjścia potrzebny klucz albo zapłata równowartości w walucie (wyjście awaryjne kosztem zakupów w sklepie).
-- Klucz nie może być szczególnie trudny do zdobycia. Propozycja: losowany z kilku ręcznie postawionych miejsc, bez strażnika albo ze słabym.
+- Klucz nie może być szczególnie trudny do zdobycia. Losowany z 5–6 ręcznie postawionych miejsc w głównej strukturze lub w jej pobliżu.
 
 ## Mgła (presja czasu)
 - Granica mapy zawęża się z czasem i jest oznaczona mgłą.
@@ -88,11 +99,11 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 ## Otwarte kwestie
 - Odległość i zakres kąta kamery (zza pleców czy wyżej, nad postacią).
 - Sklep i ulepszenia umiejętności (na później): pełna lista ulepszeń w każdej gałęzi, podział między NPC.
-- Lista zawartości mapy, a z niej docelowa skala map.
-- Długość runu i liczba map.
+- Docelowa skala map (z listy zawartości).
+- Liczba map w runie.
 
 ## Proponowana kolejność prac
 1. Kamera (obrót, kąt, widoczność przez obiekty): zrobione na Lvl_CameraTest.
-2. Lista zawartości mapy i skala.
+2. Lista zawartości mapy (ustalona) i skala.
 3. Pętla jednej mapy: wejście, eksploracja, klucz, poziomy mgły, wyjście.
 4. Sklep i przedmioty, potem questy i meta-progresja.
