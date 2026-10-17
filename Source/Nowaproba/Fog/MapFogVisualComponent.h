@@ -12,17 +12,17 @@ struct NOWAPROBA_API FFogLevelLook
 {
 	GENERATED_BODY()
 
-	/** 0..1, 1 = ground fully covered. */
+	/** Density multiplier (0..1); 1 = dense enough to hide the ground. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fog", meta = (ClampMin = "0", ClampMax = "1"))
-	float Opacity = 0.25f;
+	float Opacity = 0.12f;
 
-	/** Height above BaseZ (cm) with full Opacity. */
+	/** Height above BaseZ (cm) of the dense core in deep fog (scaled down along the edge ramp). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fog", meta = (ClampMin = "0"))
 	float FullHeight = 0.f;
 
-	/** Height above BaseZ (cm) where the fog has faded out. */
+	/** Average height above BaseZ (cm) of the puffy bank top in deep fog; puffs vary it about 0.15x..1.4x. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fog", meta = (ClampMin = "1"))
-	float FadeHeight = 300.f;
+	float FadeHeight = 250.f;
 
 	/** 0..1 strength of the moving cloud blobs. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fog", meta = (ClampMin = "0", ClampMax = "1"))
@@ -65,17 +65,17 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Fog")
 	float BaseZ = 0.f;
 
-	/** Width (cm) of the soft border where the fog builds up behind the safe square's edge. */
+	/** Width (cm) of the concave ramp behind the safe square's edge: low wisps first, full bank height at the end. */
 	UPROPERTY(EditAnywhere, Category = "Fog", meta = (ClampMin = "1"))
-	float EdgeWidth = 400.f;
+	float EdgeWidth = 1500.f;
 
 	/** Number of toon bands; 0 = smooth. */
 	UPROPERTY(EditAnywhere, Category = "Fog", meta = (ClampMin = "0"))
-	float Steps = 4.f;
+	float Steps = 5.f;
 
 	/** Size (cm) of the cloud blobs. */
 	UPROPERTY(EditAnywhere, Category = "Fog", meta = (ClampMin = "1"))
-	float CloudScale = 600.f;
+	float CloudScale = 450.f;
 
 	UPROPERTY(EditAnywhere, Category = "Fog", meta = (ClampMin = "0"))
 	float CloudSpeed = 0.3f;

@@ -13,11 +13,11 @@ UMapFogVisualComponent::UMapFogVisualComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	LevelLooks = {
-		{ 0.25f, 0.f, 300.f, 1.f },
-		{ 0.4f, 10.f, 300.f, 1.f },
-		{ 0.6f, 20.f, 280.f, 0.8f },
-		{ 0.8f, 35.f, 250.f, 0.6f },
-		{ 1.f, 50.f, 200.f, 0.4f },
+		{ 0.12f, 0.f, 250.f, 1.f },
+		{ 0.25f, 5.f, 280.f, 1.f },
+		{ 0.45f, 15.f, 300.f, 0.9f },
+		{ 0.7f, 30.f, 320.f, 0.8f },
+		{ 1.f, 50.f, 320.f, 0.8f },
 	};
 }
 
