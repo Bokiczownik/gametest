@@ -1,0 +1,10 @@
+Name,SpawnWeight,DropChance,CoinsMin,CoinsMax,ItemChance,ItemRarityMin,ItemRarityMax,ResourceChance,ResourceType,ResourceMin,ResourceMax
+Barrel,0,0.4,1,5,0,None,None,0.05,Random,1,1
+Chest_Common,70,1,10,25,0.3,Common,Common,0.2,Random,1,2
+Chest_Rare,25,1,25,50,1,Common,Rare,0.4,Random,1,3
+Chest_Epic,5,1,50,100,1,Rare,Epic,0.6,Random,2,4
+Chest_Legendary,0,1,100,200,1,Epic,Legendary,1,Random,3,5
+Chest_Fog,0,1,40,80,1,Rare,Epic,0.5,Random,2,4
+ResourceNode_Red,0,1,0,0,0,None,None,1,Resource1,3,6
+ResourceNode_Blue,0,1,0,0,0,None,None,1,Resource2,3,6
+ResourceNode_Green,0,1,0,0,0,None,None,1,Resource3,3,6
