@@ -9,6 +9,7 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 
 ## Struktura runu
 - Seria map. Między mapami jest mapa ze sklepem (zakup ulepszeń), potem kolejna mapa.
+- Na mapie sklepu kilku NPC, każdy z własnym sklepem (szczegóły później).
 - Śmierć oznacza nowy run. Wyjątek: przedmiot dający drugie życie.
 - Propozycja do weryfikacji: 4–5 map po 4–6 min, cały run 20–30 min.
 - Sklep może pokazywać podgląd następnej mapy (biom, modyfikator), żeby było pod co planować zakupy (propozycja).
@@ -77,7 +78,7 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Kamera musi pokazywać gracza i teren wokół niego przez zasłaniające obiekty (np. przenikanie lub wycinanie geometrii).
 - Podstawowy ruch: sprint, slide (już w grze), skok.
 - Podwójny skok i dash: ulepszenia ruchu kupowane za surowiec ruchu (zielony).
-- Dash zastępuje slide czy działa obok niego: do ustalenia.
+- Dash zastępuje slide.
 - Wysokości struktur i trudno dostępnych miejsc nie są teraz priorytetem; na końcu można je dopasować, dodając półki i inne elementy otoczenia do wskakiwania.
 
 ## Na później
@@ -86,8 +87,7 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 
 ## Otwarte kwestie
 - Odległość i zakres kąta kamery (zza pleców czy wyżej, nad postacią).
-- Dash: zastępuje slide czy działa obok niego.
-- Gdzie i jak kupuje się ulepszenia umiejętności (na mapie sklepu obok przedmiotów?) oraz pełna lista ulepszeń w każdej gałęzi.
+- Sklep i ulepszenia umiejętności (na później): pełna lista ulepszeń w każdej gałęzi, podział między NPC.
 - Lista zawartości mapy, a z niej docelowa skala map.
 - Długość runu i liczba map.
 
