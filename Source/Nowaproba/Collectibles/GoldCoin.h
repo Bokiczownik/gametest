@@ -10,7 +10,7 @@ class UStaticMeshComponent;
 
 /**
  * Spinning coin picked up by a player-controlled pawn on overlap.
- * Pays Value through the pawn's UCoinComboComponent (or straight into its wallet if it has none).
+ * Pays Value into the pawn's wallet.
  * Mesh and material are set in the Blueprint subclass (BP_GoldCoin).
  */
 UCLASS()
@@ -33,7 +33,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Coin")
 	TObjectPtr<URotatingMovementComponent> Rotation;
 
-	/** Base currency before the combo multiplier. */
 	UPROPERTY(EditAnywhere, Category = "Coin", meta = (ClampMin = "1"))
 	int32 Value = 5;
 };

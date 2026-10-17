@@ -1,6 +1,5 @@
 #include "GoldCoin.h"
 
-#include "CoinComboComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "../Currency/CurrencyComponent.h"
@@ -35,18 +34,13 @@ void AGoldCoin::NotifyActorBeginOverlap(AActor* OtherActor)
 		return;
 	}
 
-	if (UCoinComboComponent* Combo = Pawn->FindComponentByClass<UCoinComboComponent>())
-	{
-		Combo->RegisterCoin(Value);
-	}
-	else if (UCurrencyComponent* Wallet = Pawn->FindComponentByClass<UCurrencyComponent>())
-	{
-		Wallet->AddCurrency(Value);
-	}
-	else
+	UCurrencyComponent* Wallet = Pawn->FindComponentByClass<UCurrencyComponent>();
+	if (!Wallet)
 	{
 		return;
 	}
+
+	Wallet->AddCurrency(Value);
 
 	Destroy();
 }
