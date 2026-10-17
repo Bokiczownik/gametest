@@ -22,8 +22,9 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 
 ## Wyjście z mapy
 - Nieoznaczone na starcie, losowane z kilku możliwych miejsc.
+- Jedno wyjście i jeden klucz na mapę.
 - Do wyjścia potrzebny klucz albo zapłata równowartości w walucie (wyjście awaryjne kosztem zakupów w sklepie).
-- Klucz zawsze w ryzykownym miejscu: u elity, w trudno dostępnym miejscu albo w strefie, którą mgła zajmuje wcześnie.
+- Klucz nie może być szczególnie trudny do zdobycia. Propozycja: losowany z kilku ręcznie postawionych miejsc, bez strażnika albo ze słabym.
 
 ## Mgła (presja czasu)
 - Granica mapy zawęża się z czasem i jest oznaczona mgłą.
@@ -46,14 +47,31 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Mała liczba wrogów, więc każdy potrzebuje czytelnych ataków z zapowiedzią i roli w grupie, a elity własnej mechaniki.
 
 ## Zasoby
-- Skrzynie z przedmiotami, obiekty z walutą (np. beczki).
-- Zasoby z niszczenia elementów otoczenia (drzewa, kamienie). Niszczenie ma być szybkie (2–3 uderzenia).
-- Różne zasoby z różnym zastosowaniem w sklepie, żeby wybór, co zbierać, zależał od planowanego buildu (propozycja).
+- Obiekty z walutą (np. beczki); waluta też z przeciwników i skrzyń.
+- Drzewa i kamienie są tylko dekoracją (bez niszczenia i zbierania), żeby gracz nie mylił się, co da się zebrać.
+- Surowce muszą być wyraźnie odróżnialne od dekoracji. Które surowce i do czego służą: do ustalenia.
+- Różne surowce z różnym zastosowaniem w sklepie, żeby wybór, co zbierać, zależał od planowanego buildu (propozycja).
+
+## Skrzynie
+- Ok. 99% skrzyń jest darmowych do otwarcia.
+- Ok. 1% to skrzynie legendarne lub z questa: otwierają się dopiero po spełnieniu warunku (pokonanie przeciwnika, wykonanie zadania).
+- Rarity: zwykła, rzadka, epicka, legendarna.
+- Rodzaje:
+  - **zwykła:** na mapie od początku,
+  - **mgielna:** pojawia się dopiero, gdy dotrze do niej mgła; wyższe rarity jako nagroda za ryzyko,
+  - **strzeżona:** pilnowana przez elitę lub bossa; co najmniej rzadka.
+
+## Wpływ gracza na zawartość mapy
+- Ulepszenie (w sklepie) zwiększające szansę na pojawienie się rzadszych skrzyń.
+- Jednorazowy przedmiot zwiększający ilość wybranego surowca na następnej mapie kosztem pozostałych.
 
 ## Kamera i ruch
 - Kamera trzecioosobowa z możliwością obrotu dookoła postaci i lekkiej zmiany kąta.
 - Kamera musi pokazywać gracza i teren wokół niego przez zasłaniające obiekty (np. przenikanie lub wycinanie geometrii).
-- Potrzebne stałe parametry ruchu (wysokość skoku, podwójny skok, zasięg dasha, progi modyfikatorów), żeby projektować pod nie miejsca trudno dostępne.
+- Podstawowy ruch: sprint, slide (już w grze), skok.
+- Podwójny skok: do kupienia w sklepie.
+- Dash: do ustalenia, czy jest przedmiotem ze sklepu zastępującym slide (propozycja), czy zastępuje slide od początku.
+- Wysokości struktur i trudno dostępnych miejsc nie są teraz priorytetem; na końcu można je dopasować, dodając półki i inne elementy otoczenia do wskakiwania.
 
 ## Na później
 - Questy brane w sklepie (np. zabij konkretną elitę lub bossa).
@@ -61,12 +79,13 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 
 ## Otwarte kwestie
 - Odległość i zakres kąta kamery (zza pleców czy wyżej, nad postacią).
-- Parametry ruchu i progi modyfikatorów skoku.
+- Dash: przedmiot ze sklepu zamiast slide czy od początku zamiast slide.
+- Rodzaje surowców i ich zastosowanie.
 - Lista zawartości mapy, a z niej docelowa skala map.
 - Długość runu i liczba map.
 
 ## Proponowana kolejność prac
-1. Kamera (obrót, kąt, widoczność przez obiekty) i parametry ruchu, testowane na małej scenie (most, platformy, punkt wysoko).
+1. Kamera (obrót, kąt, widoczność przez obiekty): zrobione na Lvl_CameraTest.
 2. Lista zawartości mapy i skala.
 3. Pętla jednej mapy: wejście, eksploracja, klucz, poziomy mgły, wyjście.
 4. Sklep i przedmioty, potem questy i meta-progresja.
