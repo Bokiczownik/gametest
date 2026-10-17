@@ -49,8 +49,14 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 ## Zasoby
 - Obiekty z walutą (np. beczki); waluta też z przeciwników i skrzyń.
 - Drzewa i kamienie są tylko dekoracją (bez niszczenia i zbierania), żeby gracz nie mylił się, co da się zebrać.
-- Surowce muszą być wyraźnie odróżnialne od dekoracji. Które surowce i do czego służą: do ustalenia.
-- Różne surowce z różnym zastosowaniem w sklepie, żeby wybór, co zbierać, zależał od planowanego buildu (propozycja).
+- Oprócz waluty są surowce. Mają dawać różnorodność i zmuszać do planowania runu: czasu na mapie nie starcza na zebranie wszystkiego, więc gracz wybiera, co zbiera, pod planowany build.
+- Surowce muszą być wyraźnie odróżnialne od dekoracji.
+- Propozycja (do potwierdzenia), pasuje do 3 surowców w UResourceComponent:
+  - **Waluta (złoto):** beczki, wrogowie, skrzynie; ceny w sklepie, zapłata za wyjście bez klucza.
+  - **3 surowce jako świecące złoża w różnych kolorach** (rozbijane atakiem, wyraźnie inne niż kamienie), każdy przypisany do gałęzi ulepszeń, np. czerwony: atak, niebieski: przetrwanie, zielony: ruch.
+  - Przedmioty w sklepie kosztują walutę plus surowiec swojej gałęzi.
+  - Złoża w ręcznie postawionych punktach o różnej trudności dostępu (wysoko, pod mostem, w mgle); rzadsze surowce częściej w trudnych miejscach.
+  - Podgląd następnej mapy w sklepie pokazuje, których surowców będzie więcej, a przedmiot zwiększający ilość surowca pozwala to zmienić.
 
 ## Skrzynie
 - Ok. 99% skrzyń jest darmowych do otwarcia.
@@ -80,7 +86,7 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 ## Otwarte kwestie
 - Odległość i zakres kąta kamery (zza pleców czy wyżej, nad postacią).
 - Dash: przedmiot ze sklepu zamiast slide czy od początku zamiast slide.
-- Rodzaje surowców i ich zastosowanie.
+- Rodzaje surowców i ich zastosowanie: potwierdzić propozycję z sekcji Zasoby (złoża w kolorach, gałęzie ulepszeń).
 - Lista zawartości mapy, a z niej docelowa skala map.
 - Długość runu i liczba map.
 
