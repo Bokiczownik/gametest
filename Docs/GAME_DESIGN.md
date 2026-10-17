@@ -5,15 +5,14 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 ## Gatunek i cel
 - Hack and slash z elementami platformówki, w stylu roguelike (inspiracja: Megabonk).
 - Mniej przeciwników niż w Megabonku, więcej myślenia i planowania.
-- Gra przechodzona kilkaset razy różnymi buildami, więc pojedynczy run musi być krótki.
+- Gra przechodzona kilkaset razy różnymi buildami. Długość runu jak w innych roguelike'ach (Isaac, późniejsze etapy Hadesa): w wolnym tempie 1–1,5 h, przy najszybszym przejściu 15–20 min (klucz, wyjście, 4 mapy, boss).
 
 ## Struktura runu
 - Seria map. Między mapami jest mapa ze sklepem (zakup ulepszeń), potem kolejna mapa.
 - Na mapie sklepu kilku NPC, każdy z własnym sklepem (szczegóły później).
 - Śmierć oznacza nowy run. Wyjątek: przedmiot dający drugie życie.
 - Jedna mapa: 10–15 min, dłużej, jeśli gracz zostaje po rozprzestrzenieniu się mgły i poluje na trudniejszych przeciwników.
-- Run dzieli się na etapy. Etap to 4 mapy (do ok. 15 min każda), a na końcu etapu jest główny boss.
-- Liczba etapów w runie: do ustalenia.
+- Run to 4 mapy (do ok. 15 min każda) i główny boss na końcu.
 - Zapis automatyczny i bardzo częsty, nie tylko przy zmianie mapy czy instancji. Implementacja na sam koniec.
 - Sklep może pokazywać podgląd następnej mapy (biom, modyfikator), żeby było pod co planować zakupy (propozycja).
 
@@ -102,7 +101,6 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Odległość i zakres kąta kamery (zza pleców czy wyżej, nad postacią).
 - Sklep i ulepszenia umiejętności (na później): pełna lista ulepszeń w każdej gałęzi, podział między NPC.
 - Docelowa skala map (z listy zawartości).
-- Liczba etapów w runie.
 
 ## Proponowana kolejność prac
 1. Kamera (obrót, kąt, widoczność przez obiekty): zrobione na Lvl_CameraTest.
