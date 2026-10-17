@@ -52,17 +52,22 @@ FLootResult ULootLibrary::RollLoot(const UDataTable* Table, FName RowName)
 	return Result;
 }
 
-FName ULootLibrary::PickWeightedRow(const UDataTable* Table)
+FName ULootLibrary::PickWeightedRow(const UDataTable* Table, const TArray<FName>& OnlyRows)
 {
 	if (!Table)
 	{
 		return NAME_None;
 	}
 
-	float Total = 0.f;
-	Table->ForeachRow<FLootTableRow>(TEXT("PickWeightedRow"), [&Total](const FName&, const FLootTableRow& Row)
+	auto WeightOf = [&OnlyRows](const FName& Name, const FLootTableRow& Row)
 	{
-		Total += FMath::Max(0.f, Row.SpawnWeight);
+		return OnlyRows.Num() == 0 || OnlyRows.Contains(Name) ? FMath::Max(0.f, Row.SpawnWeight) : 0.f;
+	};
+
+	float Total = 0.f;
+	Table->ForeachRow<FLootTableRow>(TEXT("PickWeightedRow"), [&Total, &WeightOf](const FName& Name, const FLootTableRow& Row)
+	{
+		Total += WeightOf(Name, Row);
 	});
 	if (Total <= 0.f)
 	{
@@ -71,9 +76,9 @@ FName ULootLibrary::PickWeightedRow(const UDataTable* Table)
 
 	float Pick = FMath::FRand() * Total;
 	FName Picked = NAME_None;
-	Table->ForeachRow<FLootTableRow>(TEXT("PickWeightedRow"), [&Pick, &Picked](const FName& Name, const FLootTableRow& Row)
+	Table->ForeachRow<FLootTableRow>(TEXT("PickWeightedRow"), [&Pick, &Picked, &WeightOf](const FName& Name, const FLootTableRow& Row)
 	{
-		const float Weight = FMath::Max(0.f, Row.SpawnWeight);
+		const float Weight = WeightOf(Name, Row);
 		if (Picked.IsNone() && Weight > 0.f)
 		{
 			Pick -= Weight;

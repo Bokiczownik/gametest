@@ -18,9 +18,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Loot")
 	static FLootResult RollLoot(const UDataTable* Table, FName RowName);
 
-	/** Picks a row by SpawnWeight (rows with weight 0 are skipped). Returns None if no row has weight. */
-	UFUNCTION(BlueprintCallable, Category = "Loot")
-	static FName PickWeightedRow(const UDataTable* Table);
+	/** Picks a row by SpawnWeight (rows with weight 0 are skipped); OnlyRows limits the candidates (empty = all rows). Returns None if no candidate has weight. */
+	UFUNCTION(BlueprintCallable, Category = "Loot", meta = (AutoCreateRefTerm = "OnlyRows"))
+	static FName PickWeightedRow(const UDataTable* Table, const TArray<FName>& OnlyRows);
 
 	/** Adds coins and resources to the pawn's Currency/Resources components; items are only shown on screen for now. */
 	UFUNCTION(BlueprintCallable, Category = "Loot")
