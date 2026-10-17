@@ -12,7 +12,8 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Na mapie sklepu kilku NPC, każdy z własnym sklepem (szczegóły później).
 - Śmierć oznacza nowy run. Wyjątek: przedmiot dający drugie życie.
 - Jedna mapa: 10–15 min, dłużej, jeśli gracz zostaje po rozprzestrzenieniu się mgły i poluje na trudniejszych przeciwników.
-- Run to 4 mapy (do ok. 15 min każda) i główny boss na końcu.
+- Run to 4 mapy (do ok. 15 min każda) i główny boss na końcu. Na razie gra ma jeden etap.
+- Na później, po ukończeniu pierwszego etapu: drugi etap i zapis postaci na jego początku, żeby po śmierci zaczynać od stanu z początku drugiego etapu (pomysł).
 - Zapis automatyczny i bardzo częsty, nie tylko przy zmianie mapy czy instancji. Implementacja na sam koniec.
 - Sklep może pokazywać podgląd następnej mapy (biom, modyfikator), żeby było pod co planować zakupy (propozycja).
 
@@ -21,7 +22,12 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Kilka map na etap, z których losuje się jedną, plus modyfikatory mapy (propozycja).
 - Kilka poziomów w pionie: pod mostem (np. skrzynia), na moście (parkour po zawalonych elementach), ukryte miejsca wysoko (np. 100 m nad mostem).
 - Dostęp do trudnych miejsc ogranicza trudność dotarcia (np. wysokość skoku z modyfikatorów), a nie brak konkretnego przedmiotu.
-- Skala map: do ustalenia. Obecny Lvl_Landscape (2 km) służy tylko do testów. Docelową skalę wyznaczy lista zawartości mapy (poniżej).
+- Obecny Lvl_Landscape (2 km) służy tylko do testów.
+- Skala mapy (propozycja do sprawdzenia w grze): obszar grywalny ok. 500×500–600×600 m, plus dekoracyjny teren poza granicą.
+  - Prędkość: chód 6 m/s, sprint 10 m/s, ale stamina (30, zużycie 25/s, regeneracja po 3 s, 20/s) daje średnio ok. 7 m/s w dłuższym biegu.
+  - Szybkie przejście (ok. 3,5 min na mapę, połowa czasu na ruch): ok. 700 m drogi start → klucz w głównej strukturze → wyjście przy krawędzi; przy krętej trasie daje to promień ok. 250–300 m od środka.
+  - Wolne przejście (15 min, połowa czasu na ruch, reszta na walkę i zbieranie): ok. 3 km drogi, co przy widoczności ok. 30 m w każdą stronę obejmuje mniej więcej połowę mapy. Gracz nie zbierze wszystkiego, co pasuje do założenia planowania.
+  - Gęstość przy ok. 0,3 km²: skrzynia średnio co ok. 130 m, beczki co ok. 60 m (w praktyce w grupach). Główna struktura ok. 100–150 m szerokości.
 
 ### Zawartość jednej mapy
 - **Główna struktura:** zawsze jedna bardzo duża (np. zamek na środku mapy).
@@ -100,10 +106,10 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 ## Otwarte kwestie
 - Odległość i zakres kąta kamery (zza pleców czy wyżej, nad postacią).
 - Sklep i ulepszenia umiejętności (na później): pełna lista ulepszeń w każdej gałęzi, podział między NPC.
-- Docelowa skala map (z listy zawartości).
+- Skala map: sprawdzić propozycję 500–600 m w grze (testowa mapa z blokoutem głównej struktury).
 
 ## Proponowana kolejność prac
 1. Kamera (obrót, kąt, widoczność przez obiekty): zrobione na Lvl_CameraTest.
-2. Lista zawartości mapy (ustalona) i skala.
+2. Lista zawartości mapy (ustalona) i skala (propozycja do sprawdzenia).
 3. Pętla jednej mapy: wejście, eksploracja, klucz, poziomy mgły, wyjście.
 4. Sklep i przedmioty, potem questy i meta-progresja.
