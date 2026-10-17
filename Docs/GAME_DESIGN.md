@@ -56,6 +56,7 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Gracz może cofnąć się w mgłę do niezbadanej części mapy na własne ryzyko.
 - Do rozważenia: lepsze nagrody w obszarach, które mgła już zajęła; zagrożenie rosnące z głębokością i czasem spędzonym w mgle; ograniczenie przeczekiwania w miejscach ponad mgłą (latający lub strzelający wrogowie w późnych poziomach).
 - Krawędź mgły musi być czytelna, czyli osobny efekt, a nie mgła odległości (ExponentialHeightFog).
+- Wygląd: pastelowa, cukierkowa mgła przy ziemi (nie realistyczna). Pierwszy poziom delikatny, z każdym poziomem gęstsza; na ostatnim pełna, nieprzezroczysta do kolan, zakrywa podłoże, a trawa pod nią jest wyłączana. Gdy gracz stoi w mgle, brzegi ekranu lekko się zabarwiają.
 
 ## Przeciwnicy
 - Mogą wychodzić poza mgłę, a z czasem robią to coraz częściej.
@@ -112,5 +113,5 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 ## Proponowana kolejność prac
 1. Kamera (obrót, kąt, widoczność przez obiekty): zrobione na Lvl_CameraTest.
 2. Lista zawartości mapy i skala: ustalone.
-3. Pętla jednej mapy: wejście, eksploracja, klucz, poziomy mgły, wyjście. W toku: klucz, wyjście (klucz lub opłata) i kurczenie mgły do wyjścia działają na Lvl_ScaleTest; brak jeszcze wrogów w mgle i efektu mgły.
+3. Pętla jednej mapy: wejście, eksploracja, klucz, poziomy mgły, wyjście. W toku: klucz, wyjście (klucz lub opłata) i kurczenie mgły do wyjścia działają na Lvl_ScaleTest; efekt mgły zrobiony (do oceny w grze); brak jeszcze wrogów w mgle.
 4. Sklep i przedmioty, potem questy i meta-progresja.
