@@ -57,7 +57,7 @@ void AShopNPC::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void AShopNPC::Interact(APawn* InstigatorPawn)
+void AShopNPC::Interact_Implementation(APawn* InstigatorPawn)
 {
 	if (IsShopOpen())
 	{

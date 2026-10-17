@@ -26,9 +26,11 @@ public:
 	AActor* GetTarget() const { return Target.Get(); }
 
 	/** Called by interactables when the owner enters their range. Target must implement IInteractable. */
+	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void SetTarget(AActor* NewTarget);
 
 	/** Called by interactables when the owner leaves their range; ignored if another target took over. */
+	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void ClearTarget(AActor* OldTarget);
 
 	UPROPERTY(BlueprintAssignable, Category = "Interaction")

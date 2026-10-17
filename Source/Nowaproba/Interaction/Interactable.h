@@ -6,7 +6,7 @@
 
 class APawn;
 
-UINTERFACE(MinimalAPI, meta = (CannotImplementInterfaceInBlueprint))
+UINTERFACE(MinimalAPI, BlueprintType)
 class UInteractable : public UInterface
 {
 	GENERATED_BODY()
@@ -18,5 +18,7 @@ class NOWAPROBA_API IInteractable
 	GENERATED_BODY()
 
 public:
-	virtual void Interact(APawn* InstigatorPawn) = 0;
+	/** C++: override Interact_Implementation. Blueprint: implement the Interact event. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
+	void Interact(APawn* InstigatorPawn);
 };

@@ -11,15 +11,15 @@ UInteractionComponent::UInteractionComponent()
 void UInteractionComponent::Interact()
 {
 	AActor* Current = Target.Get();
-	if (IInteractable* Interactable = Cast<IInteractable>(Current))
+	if (Current && Current->Implements<UInteractable>())
 	{
-		Interactable->Interact(Cast<APawn>(GetOwner()));
+		IInteractable::Execute_Interact(Current, Cast<APawn>(GetOwner()));
 	}
 }
 
 void UInteractionComponent::SetTarget(AActor* NewTarget)
 {
-	if (!Cast<IInteractable>(NewTarget) || Target.Get() == NewTarget)
+	if (!NewTarget || !NewTarget->Implements<UInteractable>() || Target.Get() == NewTarget)
 	{
 		return;
 	}

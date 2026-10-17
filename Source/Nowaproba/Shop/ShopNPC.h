@@ -24,7 +24,7 @@ class NOWAPROBA_API AShopNPC : public AActor, public IInteractable
 public:
 	AShopNPC();
 
-	virtual void Interact(APawn* InstigatorPawn) override;
+	virtual void Interact_Implementation(APawn* InstigatorPawn) override;
 
 	UFUNCTION(BlueprintPure, Category = "Shop")
 	bool IsShopOpen() const;

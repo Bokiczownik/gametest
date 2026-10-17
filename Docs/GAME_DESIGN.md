@@ -112,5 +112,5 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 ## Proponowana kolejność prac
 1. Kamera (obrót, kąt, widoczność przez obiekty): zrobione na Lvl_CameraTest.
 2. Lista zawartości mapy i skala: ustalone.
-3. Pętla jednej mapy: wejście, eksploracja, klucz, poziomy mgły, wyjście.
+3. Pętla jednej mapy: wejście, eksploracja, klucz, poziomy mgły, wyjście. W toku: klucz, wyjście (klucz lub opłata) i kurczenie mgły do wyjścia działają na Lvl_ScaleTest; brak jeszcze wrogów w mgle i efektu mgły.
 4. Sklep i przedmioty, potem questy i meta-progresja.
