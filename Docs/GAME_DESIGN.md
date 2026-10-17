@@ -27,6 +27,7 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
   - Prędkość: chód 6 m/s, sprint 10 m/s, ale stamina (30, zużycie 25/s, regeneracja po 3 s, 20/s) daje średnio ok. 7 m/s w dłuższym biegu.
   - Szybkie przejście (ok. 3,5 min na mapę, połowa czasu na ruch): ok. 700 m drogi start → klucz w głównej strukturze → wyjście przy krawędzi; przy krętej trasie daje to promień ok. 250–300 m od środka.
   - Wolne przejście (15 min, połowa czasu na ruch, reszta na walkę i zbieranie): ok. 3 km drogi, co przy widoczności ok. 30 m w każdą stronę obejmuje mniej więcej połowę mapy. Gracz nie zbierze wszystkiego, co pasuje do założenia planowania.
+  - Poziomy w pionie (pod mostem, na moście, wysoko) zwiększają powierzchnię do eksploracji bez wydłużania odległości. Jeśli test pokaże, że mapa jest za ciasna, powiększamy ją.
   - Gęstość przy ok. 0,3 km²: skrzynia średnio co ok. 130 m, beczki co ok. 60 m (w praktyce w grupach). Główna struktura ok. 100–150 m szerokości.
 
 ### Zawartość jednej mapy
