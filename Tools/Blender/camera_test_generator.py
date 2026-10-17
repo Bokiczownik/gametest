@@ -32,25 +32,34 @@ def box(center, size, rot=(0.0, 0.0, 0.0)):
     return (center, size, rot)
 
 
-def bridge():
-    deck_top, deck_t, length, width = 6.0, 0.6, 24.0, 5.0
-    ramp_run = 14.0
-    a = math.atan2(deck_top, ramp_run)
-    ramp_len = math.hypot(deck_top, ramp_run)
-    half = length * 0.5
-    parts = [
-        box((0, 0, deck_top - deck_t * 0.5), (length, width, deck_t)),
-        box((0, width * 0.5 - 0.15, deck_top + 0.5), (length, 0.3, 1.0)),      # railings
-        box((0, -width * 0.5 + 0.15, deck_top + 0.5), (length, 0.3, 1.0)),
+BRIDGE_DECK_TOP, BRIDGE_DECK_T, BRIDGE_LEN, BRIDGE_W, BRIDGE_RAMP_RUN = 6.0, 0.6, 24.0, 5.0, 14.0
+
+
+def bridge_deck():
+    """Deck with railings. Bridge parts share one origin: place all three at the same location."""
+    top, t, length, width = BRIDGE_DECK_TOP, BRIDGE_DECK_T, BRIDGE_LEN, BRIDGE_W
+    return [
+        box((0, 0, top - t * 0.5), (length, width, t)),
+        box((0, width * 0.5 - 0.15, top + 0.5), (length, 0.3, 1.0)),          # railings
+        box((0, -width * 0.5 + 0.15, top + 0.5), (length, 0.3, 1.0)),
     ]
+
+
+def bridge_ramps():
+    top, t, half, run = BRIDGE_DECK_TOP, BRIDGE_DECK_T, BRIDGE_LEN * 0.5, BRIDGE_RAMP_RUN
+    a = math.atan2(top, run)
+    ramp_len = math.hypot(top, run)
+    parts = []
     for s in (1, -1):
-        cx = s * (half + ramp_run * 0.5) - s * deck_t * 0.5 * math.sin(a)
-        cz = deck_top * 0.5 - deck_t * 0.5 * math.cos(a)
-        parts.append(box((cx, 0, cz), (ramp_len, width, deck_t), (0, s * math.degrees(a), 0)))
-        for y in (1.8, -1.8):                                                 # pillars
-            h = deck_top - deck_t
-            parts.append(box((s * 7.0, y, h * 0.5), (1.0, 1.0, h)))
+        cx = s * (half + run * 0.5) - s * t * 0.5 * math.sin(a)
+        cz = top * 0.5 - t * 0.5 * math.cos(a)
+        parts.append(box((cx, 0, cz), (ramp_len, BRIDGE_W, t), (0, s * math.degrees(a), 0)))
     return parts
+
+
+def bridge_pillars():
+    h = BRIDGE_DECK_TOP - BRIDGE_DECK_T
+    return [box((s * 7.0, y, h * 0.5), (1.0, 1.0, h)) for s in (1, -1) for y in (1.8, -1.8)]
 
 
 def debris():
@@ -82,37 +91,56 @@ def tower():
     return parts
 
 
-def ruin():
-    """Walled room with a door and a half-collapsed roof, plus a short covered tunnel at +x."""
-    w, d, h, t = 10.0, 8.0, 4.0, 0.4
-    parts = [
+RUIN_W, RUIN_D, RUIN_H, RUIN_T = 10.0, 8.0, 4.0, 0.4
+
+
+def ruin_walls():
+    """Walled room with a 2 m door. Ruin parts share one origin: place all three at the same location."""
+    w, d, h, t = RUIN_W, RUIN_D, RUIN_H, RUIN_T
+    return [
         box((0, d * 0.5 - t * 0.5, h * 0.5), (w, t, h)),                        # back wall
         box((-w * 0.5 + t * 0.5, 0, h * 0.5), (t, d, h)),                       # left wall
         box((w * 0.5 - t * 0.5, 0, h * 0.5), (t, d, h)),                        # right wall
         box((-3.0, -d * 0.5 + t * 0.5, h * 0.5), (4.0, t, h)),                  # front wall, door 2 m
         box((3.0, -d * 0.5 + t * 0.5, h * 0.5), (4.0, t, h)),
-        box((-1.5, 0, h + 0.2), (7.0, d, 0.4)),                                 # roof (x -5..2)
+    ]
+
+
+def ruin_roof():
+    """Half-collapsed roof over the room."""
+    return [
+        box((-1.5, 0, RUIN_H + 0.2), (7.0, RUIN_D, 0.4)),                       # roof (x -5..2)
         box((3.6, 0.5, 2.2), (3.5, 5.0, 0.35), (0, 35, 0)),                     # collapsed roof part
     ]
-    tx, tl, tw, th = 13.0, 8.0, 3.0, 3.0                                        # tunnel
-    parts += [
+
+
+def ruin_tunnel():
+    """Short covered tunnel at +x of the room."""
+    t = RUIN_T
+    tx, tl, tw, th = 13.0, 8.0, 3.0, 3.0
+    return [
         box((tx, tw * 0.5 + t * 0.5, th * 0.5), (tl, t, th)),
         box((tx, -tw * 0.5 - t * 0.5, th * 0.5), (tl, t, th)),
         box((tx, 0, th + 0.2), (tl, tw + 2 * t, 0.4)),
     ]
-    return parts
 
 
 def ground():
     return [box((0, 0, -0.25), (60.0, 60.0, 0.5))]
 
 
+# Separate meshes per structural part, so the camera occlusion cuts only the part that hides the player.
+# name -> (builder, group); parts of one group share an origin.
 OBJECTS = {
-    "SM_CamTest_Ground": ground,
-    "SM_CamTest_Bridge": bridge,
-    "SM_CamTest_Debris": debris,
-    "SM_CamTest_Tower": tower,
-    "SM_CamTest_Ruin": ruin,
+    "SM_CamTest_Ground": (ground, None),
+    "SM_CamTest_BridgeDeck": (bridge_deck, 0),
+    "SM_CamTest_BridgeRamps": (bridge_ramps, 0),
+    "SM_CamTest_BridgePillars": (bridge_pillars, 0),
+    "SM_CamTest_Debris": (debris, 1),
+    "SM_CamTest_Tower": (tower, 2),
+    "SM_CamTest_RuinWalls": (ruin_walls, 3),
+    "SM_CamTest_RuinRoof": (ruin_roof, 3),
+    "SM_CamTest_RuinTunnel": (ruin_tunnel, 3),
 }
 
 
@@ -164,11 +192,11 @@ def export(obj):
 
 def main():
     col = get_collection()
-    for i, (name, fn) in enumerate(OBJECTS.items()):
+    for name, (fn, group) in OBJECTS.items():
         obj = build(name, fn(), col)
         export(obj)                                    # exported at the origin (pivot at z = 0)
-        if name != "SM_CamTest_Ground":
-            obj.location.y = -22.5 + 15.0 * (i - 1)    # spread out in the .blend for viewing only
+        if group is not None:
+            obj.location.y = -22.5 + 15.0 * group      # spread out in the .blend for viewing only
         tris = sum(len(p.vertices) - 2 for p in obj.data.polygons)
         lo = [min(v.co[k] for v in obj.data.vertices) for k in range(3)]
         hi = [max(v.co[k] for v in obj.data.vertices) for k in range(3)]
