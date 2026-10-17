@@ -10,8 +10,9 @@ class USpringArmComponent;
 struct FInputActionValue;
 
 /**
- * Lives on the player controller. Zooms the possessed pawn's spring arm with the mouse wheel
- * and orbits it (yaw, clamped pitch) while the rotate action (right mouse button) is held.
+ * Lives on the player controller. Zooms the possessed pawn's spring arm with the mouse wheel,
+ * orbits it (yaw, clamped pitch) while the rotate action (right mouse button) is held and
+ * shifts it ahead of the pawn in the movement direction (look-ahead).
  * Movement stays camera-relative because UMovementModeComponent reads the camera yaw.
  */
 UCLASS(ClassGroup = (Gameplay), meta = (BlueprintSpawnableComponent))
@@ -57,6 +58,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Camera Control|Rotation", meta = (ClampMin = "0"))
 	float RotateSpeed = 0.3f;
 
+	/** Yaw (left/right) turns this many times faster than pitch. */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera Control|Rotation", meta = (ClampMin = "0"))
+	float YawSpeedMultiplier = 2.f;
+
 	/** Pitch limits (degrees, negative = looking down). Set both equal to lock pitch. */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera Control|Rotation", meta = (ClampMin = "-89", ClampMax = "0"))
 	float MinPitch = -75.f;
@@ -64,13 +69,28 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Camera Control|Rotation", meta = (ClampMin = "-89", ClampMax = "0"))
 	float MaxPitch = -30.f;
 
+	/** How far (cm) the camera target moves ahead of the pawn at LookAheadFullSpeed; 0 = off. */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera Control|Look Ahead", meta = (ClampMin = "0"))
+	float LookAheadDistance = 150.f;
+
+	/** Horizontal pawn speed (cm/s) at which the full look-ahead distance is reached. */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera Control|Look Ahead", meta = (ClampMin = "1"))
+	float LookAheadFullSpeed = 600.f;
+
+	/** How fast the look-ahead offset follows the movement direction. */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera Control|Look Ahead", meta = (ClampMin = "0"))
+	float LookAheadInterpSpeed = 3.f;
+
 private:
 	TWeakObjectPtr<USpringArmComponent> CachedArm;
+	FVector BaseTargetOffset = FVector::ZeroVector;
+	FVector LookAheadOffset = FVector::ZeroVector;
 	float TargetArmLength = 0.f;
 	bool bRotating = false;
 
 	APlayerController* GetLocalPlayerController() const;
 	USpringArmComponent* GetSpringArm();
+	void UpdateLookAhead(USpringArmComponent* Arm, float DeltaTime);
 
 	void HandleZoom(const FInputActionValue& Value);
 	void HandleRotateStarted(const FInputActionValue& Value);

@@ -9,7 +9,8 @@
 UCameraControlComponent::UCameraControlComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
+	// Ticks for look-ahead; turns itself off when look-ahead is disabled and no zoom is running.
+	PrimaryComponentTick.bStartWithTickEnabled = true;
 }
 
 void UCameraControlComponent::BeginPlay()
@@ -49,19 +50,47 @@ void UCameraControlComponent::TickComponent(float DeltaTime, ELevelTick TickType
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	// Keeps ticking without a pawn when look-ahead is on, so it resumes after respawn.
 	USpringArmComponent* Arm = GetSpringArm();
 	if (!Arm)
 	{
-		SetComponentTickEnabled(false);
+		if (LookAheadDistance <= 0.f)
+		{
+			SetComponentTickEnabled(false);
+		}
 		return;
 	}
 
-	Arm->TargetArmLength = FMath::FInterpTo(Arm->TargetArmLength, TargetArmLength, DeltaTime, ZoomInterpSpeed);
-	if (FMath::IsNearlyEqual(Arm->TargetArmLength, TargetArmLength, 1.f))
+	UpdateLookAhead(Arm, DeltaTime);
+
+	if (!FMath::IsNearlyEqual(Arm->TargetArmLength, TargetArmLength, 1.f))
+	{
+		Arm->TargetArmLength = FMath::FInterpTo(Arm->TargetArmLength, TargetArmLength, DeltaTime, ZoomInterpSpeed);
+	}
+	else
 	{
 		Arm->TargetArmLength = TargetArmLength;
-		SetComponentTickEnabled(false);
+		if (LookAheadDistance <= 0.f)
+		{
+			SetComponentTickEnabled(false);
+		}
 	}
+}
+
+void UCameraControlComponent::UpdateLookAhead(USpringArmComponent* Arm, float DeltaTime)
+{
+	if (LookAheadDistance <= 0.f)
+	{
+		return;
+	}
+
+	FVector Velocity = Arm->GetOwner()->GetVelocity();
+	Velocity.Z = 0.f;
+	const float Scale = FMath::Min(Velocity.Size() / LookAheadFullSpeed, 1.f);
+	const FVector Desired = Velocity.GetSafeNormal() * LookAheadDistance * Scale;
+
+	LookAheadOffset = FMath::VInterpTo(LookAheadOffset, Desired, DeltaTime, LookAheadInterpSpeed);
+	Arm->TargetOffset = BaseTargetOffset + LookAheadOffset;
 }
 
 APlayerController* UCameraControlComponent::GetLocalPlayerController() const
@@ -85,6 +114,10 @@ USpringArmComponent* UCameraControlComponent::GetSpringArm()
 		if (CachedArm.IsValid())
 		{
 			TargetArmLength = FMath::Clamp(CachedArm->TargetArmLength, MinArmLength, MaxArmLength);
+			// Base from the template, not the live value: a re-created arm keeps the old look-ahead in TargetOffset.
+			const USpringArmComponent* Template = Cast<USpringArmComponent>(CachedArm->GetArchetype());
+			BaseTargetOffset = Template ? Template->TargetOffset : FVector::ZeroVector;
+			LookAheadOffset = FVector::ZeroVector;
 		}
 	}
 	return CachedArm.Get();
@@ -133,7 +166,7 @@ void UCameraControlComponent::HandleLook(const FInputActionValue& Value)
 
 	const FVector2D Delta = Value.Get<FVector2D>();
 	FRotator Rotation = Arm->GetComponentRotation();
-	Rotation.Yaw += Delta.X * RotateSpeed;
+	Rotation.Yaw += Delta.X * RotateSpeed * YawSpeedMultiplier;
 	Rotation.Pitch = FMath::Clamp(Rotation.Pitch + Delta.Y * RotateSpeed, FMath::Min(MinPitch, MaxPitch), FMath::Max(MinPitch, MaxPitch));
 	Rotation.Roll = 0.f;
 	Arm->SetWorldRotation(Rotation);
