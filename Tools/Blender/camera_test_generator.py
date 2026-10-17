@@ -57,24 +57,30 @@ def bridge_ramps():
     return parts
 
 
-def bridge_pillars():
+BRIDGE_PILLAR_OFFSETS = [(s * 7.0, y) for s in (1, -1) for y in (1.8, -1.8)]   # place one pillar actor at each (m)
+
+
+def bridge_pillar():
+    """One pillar, origin at its base centre; placed 4x at BRIDGE_PILLAR_OFFSETS relative to the bridge."""
     h = BRIDGE_DECK_TOP - BRIDGE_DECK_T
-    return [box((s * 7.0, y, h * 0.5), (1.0, 1.0, h)) for s in (1, -1) for y in (1.8, -1.8)]
+    return [box((0, 0, h * 0.5), (1.0, 1.0, h))]
 
 
-def debris():
-    """Collapsed blocks rising in STEP increments, with tilted slabs as ramps/clutter."""
-    parts = [
-        box((-3.1, 0.0, 0.45), (3.5, 2.5, 0.35), (0, -14, 0)),               # ramp onto first block
-        box((0.0, 0.0, STEP * 0.5), (2.5, 2.5, STEP)),
-        box((2.8, 0.6, STEP), (2.2, 2.5, STEP * 2), (0, 0, 12)),
-        box((5.4, -0.6, STEP * 1.5), (2.2, 2.2, STEP * 3), (0, 0, -8)),
-        box((8.0, 0.2, STEP * 2), (2.2, 2.6, STEP * 4), (0, 0, 5)),
-        box((11.0, 0.5, STEP * 2.5), (3.2, 3.2, STEP * 5)),
-        box((5.0, 3.2, 0.9), (4.5, 1.8, 0.35), (25, 0, 20)),                 # leaning slab (clutter)
-        box((9.5, -2.8, 0.5), (1.2, 1.2, 5.0), (90, 0, 30)),                 # fallen column
-    ]
-    return parts
+DEBRIS_PIECES = [
+    box((-3.1, 0.0, 0.45), (3.5, 2.5, 0.35), (0, -14, 0)),               # ramp onto first block
+    box((0.0, 0.0, STEP * 0.5), (2.5, 2.5, STEP)),
+    box((2.8, 0.6, STEP), (2.2, 2.5, STEP * 2), (0, 0, 12)),
+    box((5.4, -0.6, STEP * 1.5), (2.2, 2.2, STEP * 3), (0, 0, -8)),
+    box((8.0, 0.2, STEP * 2), (2.2, 2.6, STEP * 4), (0, 0, 5)),
+    box((11.0, 0.5, STEP * 2.5), (3.2, 3.2, STEP * 5)),
+    box((5.0, 3.2, 0.9), (4.5, 1.8, 0.35), (25, 0, 20)),                 # leaning slab (clutter)
+    box((9.5, -2.8, 0.5), (1.2, 1.2, 5.0), (90, 0, 30)),                 # fallen column
+]
+
+
+def debris_piece(i):
+    """Collapsed blocks rising in STEP increments; one mesh per piece, all sharing the debris origin."""
+    return lambda: [DEBRIS_PIECES[i]]
 
 
 def tower():
@@ -135,8 +141,8 @@ OBJECTS = {
     "SM_CamTest_Ground": (ground, None),
     "SM_CamTest_BridgeDeck": (bridge_deck, 0),
     "SM_CamTest_BridgeRamps": (bridge_ramps, 0),
-    "SM_CamTest_BridgePillars": (bridge_pillars, 0),
-    "SM_CamTest_Debris": (debris, 1),
+    "SM_CamTest_BridgePillar": (bridge_pillar, 0),
+    **{"SM_CamTest_Debris_%02d" % (i + 1): (debris_piece(i), 1) for i in range(len(DEBRIS_PIECES))},
     "SM_CamTest_Tower": (tower, 2),
     "SM_CamTest_RuinWalls": (ruin_walls, 3),
     "SM_CamTest_RuinRoof": (ruin_roof, 3),
