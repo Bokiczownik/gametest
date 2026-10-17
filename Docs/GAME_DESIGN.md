@@ -23,7 +23,8 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 - Kilka poziomów w pionie: pod mostem (np. skrzynia), na moście (parkour po zawalonych elementach), ukryte miejsca wysoko (np. 100 m nad mostem).
 - Dostęp do trudnych miejsc ogranicza trudność dotarcia (np. wysokość skoku z modyfikatorów), a nie brak konkretnego przedmiotu.
 - Obecny Lvl_Landscape (2 km) służy tylko do testów.
-- Skala mapy (propozycja do sprawdzenia w grze): obszar grywalny ok. 500×500–600×600 m, plus dekoracyjny teren poza granicą.
+- Skala mapy: obszar ze strukturami 550×550 m (sprawdzony na Lvl_ScaleTest, wystarczający).
+- Wokół niego pas 200 m z każdej strony (cała mapa ok. 950×950 m) zajęty przez mgłę od początku: bez struktur i zawartości, tylko dekoracje (np. drzewa) i przeciwnicy pojawiający się, gdy gracz się zbliży.
   - Prędkość: chód 6 m/s, sprint 10 m/s, ale stamina (30, zużycie 25/s, regeneracja po 3 s, 20/s) daje średnio ok. 7 m/s w dłuższym biegu.
   - Szybkie przejście (ok. 3,5 min na mapę, połowa czasu na ruch): ok. 700 m drogi start → klucz w głównej strukturze → wyjście przy krawędzi; przy krętej trasie daje to promień ok. 250–300 m od środka.
   - Wolne przejście (15 min, połowa czasu na ruch, reszta na walkę i zbieranie): ok. 3 km drogi, co przy widoczności ok. 30 m w każdą stronę obejmuje mniej więcej połowę mapy. Gracz nie zbierze wszystkiego, co pasuje do założenia planowania.
@@ -107,10 +108,9 @@ Stan: ustalenia z rozmowy projektowej (2026-10-17). Nic z tego nie jest jeszcze 
 ## Otwarte kwestie
 - Odległość i zakres kąta kamery (zza pleców czy wyżej, nad postacią).
 - Sklep i ulepszenia umiejętności (na później): pełna lista ulepszeń w każdej gałęzi, podział między NPC.
-- Skala map: sprawdzić propozycję 500–600 m w grze (testowa mapa z blokoutem głównej struktury).
 
 ## Proponowana kolejność prac
 1. Kamera (obrót, kąt, widoczność przez obiekty): zrobione na Lvl_CameraTest.
-2. Lista zawartości mapy (ustalona) i skala (propozycja do sprawdzenia).
+2. Lista zawartości mapy i skala: ustalone.
 3. Pętla jednej mapy: wejście, eksploracja, klucz, poziomy mgły, wyjście.
 4. Sklep i przedmioty, potem questy i meta-progresja.
