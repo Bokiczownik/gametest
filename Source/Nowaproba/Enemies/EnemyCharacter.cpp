@@ -42,8 +42,22 @@ void AEnemyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	HomeLocation = GetActorLocation();
+	HomeRotation = GetActorRotation();
+	for (const FVector& Point : PatrolPoints)
+	{
+		PatrolRoute.Add(GetActorTransform().TransformPosition(Point));
+	}
+	ChaseSpeed = GetCharacterMovement()->MaxWalkSpeed;
+	SetChaseSpeed(Behaviour == EEnemyBehaviour::Chase);
+
 	Attack->SetTelegraph(AttackTelegraph);
 	Health->OnDeath.AddUniqueDynamic(this, &AEnemyCharacter::HandleDeath);
+}
+
+void AEnemyCharacter::SetChaseSpeed(bool bChasing)
+{
+	GetCharacterMovement()->MaxWalkSpeed = bChasing ? ChaseSpeed : PatrolWalkSpeed;
 }
 
 void AEnemyCharacter::HandleDeath()
