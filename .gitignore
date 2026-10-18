@@ -24,6 +24,11 @@ Plugins/**/Intermediate/
 *.uasset
 *.umap
 *.fbx
+*.glb
+*.gltf
+*.blend
+*.blend1
+*.fbm/
 *.obj
 *.png
 *.jpg
