@@ -2,6 +2,7 @@
 
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "../Fog/MapFogVisualComponent.h"
 #include "LootChest.h"
 #include "LootLibrary.h"
 #include "LootSpot.h"
@@ -107,13 +108,7 @@ AActor* ALootSpawner::SpawnAtSpot(TSubclassOf<AActor> Class, const ALootSpot* Sp
 
 void ALootSpawner::CheckFogChests()
 {
-	FVector Center = FVector::ZeroVector;
-	FVector Extent = FVector(UE_BIG_NUMBER);
-	if (Fog)
-	{
-		// Bounds of all components = the square of fog walls.
-		Fog->GetActorBounds(false, Center, Extent);
-	}
+	const UMapFogVisualComponent* FogVisual = Fog ? Fog->FindComponentByClass<UMapFogVisualComponent>() : nullptr;
 
 	for (int32 i = HiddenFogChests.Num() - 1; i >= 0; --i)
 	{
@@ -124,8 +119,7 @@ void ALootSpawner::CheckFogChests()
 			continue;
 		}
 
-		const FVector Offset = Chest->GetActorLocation() - Center;
-		const bool bInFog = !Fog || FMath::Abs(Offset.X) > Extent.X || FMath::Abs(Offset.Y) > Extent.Y;
+		const bool bInFog = !FogVisual || FogVisual->IsInFog(Chest->GetActorLocation());
 		if (bInFog)
 		{
 			Chest->SetRevealed(true);

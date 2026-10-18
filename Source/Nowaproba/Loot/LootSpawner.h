@@ -10,8 +10,8 @@ class UDataTable;
 
 /**
  * One per map. On BeginPlay picks random ALootSpots of each type and spawns the map's chests, barrels and
- * resource nodes (counts below; missing spots just mean fewer spawns). Fog chests stay hidden until the Fog
- * actor's bounds (the fog square) no longer contain them, checked every FogCheckInterval seconds.
+ * resource nodes (counts below; missing spots just mean fewer spawns). Fog chests stay hidden until they lie
+ * outside the Fog actor's safe circle, checked every FogCheckInterval seconds.
  */
 UCLASS()
 class NOWAPROBA_API ALootSpawner : public AActor
@@ -66,7 +66,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Loot|Counts", meta = (ClampMin = "0"))
 	int32 NodesPerTypeMax = 3;
 
-	/** Fog actor (BP_MapFog) whose bounds are the safe square. Without it fog chests appear at once. */
+	/** Fog actor (BP_MapFog); its MapFogVisualComponent tells whether a chest lies outside the safe circle. Without it fog chests appear at once. */
 	UPROPERTY(EditAnywhere, Category = "Loot|Fog")
 	TObjectPtr<AActor> Fog;
 

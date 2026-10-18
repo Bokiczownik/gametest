@@ -13,11 +13,11 @@ UMapFogVisualComponent::UMapFogVisualComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	LevelLooks = {
-		{ 0.12f, 0.f, 250.f, 1.f },
-		{ 0.25f, 5.f, 280.f, 1.f },
-		{ 0.45f, 15.f, 300.f, 0.9f },
-		{ 0.7f, 30.f, 320.f, 0.8f },
-		{ 1.f, 50.f, 320.f, 0.8f },
+		{ 0.5f, 35.f },
+		{ 0.65f, 40.f },
+		{ 0.8f, 45.f },
+		{ 0.9f, 50.f },
+		{ 1.f, 50.f },
 	};
 }
 
@@ -38,9 +38,14 @@ const FFogLevelLook& UMapFogVisualComponent::LookForLevel(int32 Level) const
 	return LevelLooks[FMath::Clamp(Level, 0, LevelLooks.Num() - 1)];
 }
 
+bool UMapFogVisualComponent::IsInFog(const FVector& Location) const
+{
+	return bLookInitialized && FVector::DistSquared2D(Location, GetOwner()->GetActorLocation()) > FMath::Square(CurrentRadius);
+}
+
 void UMapFogVisualComponent::SetFogState(float HalfExtent, int32 FogLevel)
 {
-	CurrentHalfExtent = HalfExtent;
+	CurrentRadius = HalfExtent;
 	if (!bLookInitialized)
 	{
 		bLookInitialized = true;
@@ -74,17 +79,15 @@ void UMapFogVisualComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	BlendAlpha = FMath::Min(BlendAlpha + DeltaTime / LevelBlendTime, 1.f);
 	const FFogLevelLook& Target = LookForLevel(CurrentLevel);
 	CurrentLook.Opacity = FMath::Lerp(FromLook.Opacity, Target.Opacity, BlendAlpha);
-	CurrentLook.FullHeight = FMath::Lerp(FromLook.FullHeight, Target.FullHeight, BlendAlpha);
-	CurrentLook.FadeHeight = FMath::Lerp(FromLook.FadeHeight, Target.FadeHeight, BlendAlpha);
-	CurrentLook.CloudStrength = FMath::Lerp(FromLook.CloudStrength, Target.CloudStrength, BlendAlpha);
+	CurrentLook.MaxHeight = FMath::Lerp(FromLook.MaxHeight, Target.MaxHeight, BlendAlpha);
 
 	const APlayerController* PC = GetWorld()->GetFirstPlayerController();
 	const APawn* Pawn = PC ? PC->GetPawn() : nullptr;
 	bool bPlayerInFog = false;
 	if (Pawn)
 	{
-		const FVector Offset = Pawn->GetActorLocation() - GetOwner()->GetActorLocation();
-		bPlayerInFog = FMath::Max(FMath::Abs(Offset.X), FMath::Abs(Offset.Y)) > CurrentHalfExtent;
+		PlayerLocation = Pawn->GetActorLocation();
+		bPlayerInFog = IsInFog(PlayerLocation);
 	}
 	PlayerInFog = FMath::FInterpConstantTo(PlayerInFog, bPlayerInFog ? 1.f : 0.f, DeltaTime, 2.f);
 
@@ -94,7 +97,7 @@ void UMapFogVisualComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 void UMapFogVisualComponent::PushToCollection() const
 {
 	const FVector Center = GetOwner()->GetActorLocation();
-	const FLinearColor Area(Center.X, Center.Y, CurrentHalfExtent, BaseZ);
+	const FLinearColor Area(Center.X, Center.Y, CurrentRadius, BaseZ);
 	const float GrassHide = CurrentLevel >= GrassHideLevel ? 1.f : 0.f;
 
 	if (UMaterialParameterCollectionInstance* Grass = GrassCollection ? GetWorld()->GetParameterCollectionInstance(GrassCollection) : nullptr)
@@ -110,17 +113,16 @@ void UMapFogVisualComponent::PushToCollection() const
 	}
 
 	Instance->SetVectorParameterValue(TEXT("FogArea"), Area);
-	Instance->SetVectorParameterValue(TEXT("FogLook"), FLinearColor(CurrentLook.Opacity, CurrentLook.FullHeight, CurrentLook.FadeHeight, CurrentLook.CloudStrength));
+	Instance->SetVectorParameterValue(TEXT("FogLook"), FLinearColor(CurrentLook.Opacity, CurrentLook.MaxHeight, 0.f, 0.f));
 	Instance->SetVectorParameterValue(TEXT("FogColor"), FogColor);
-	Instance->SetVectorParameterValue(TEXT("FogStyle"), FLinearColor(EdgeWidth, Steps, CloudScale, CloudSpeed));
-	Instance->SetVectorParameterValue(TEXT("FogState"), FLinearColor(PlayerInFog, GrassHide, VignetteStrength, 0.f));
+	Instance->SetVectorParameterValue(TEXT("FogStyle"), FLinearColor(EdgeWidth, EdgeDensity, MistScale, MistSpeed));
+	Instance->SetVectorParameterValue(TEXT("FogState"), FLinearColor(PlayerInFog, GrassHide, VignetteStrength, HazeStrength));
+	Instance->SetVectorParameterValue(TEXT("FogPlayer"), FLinearColor(PlayerLocation.X, PlayerLocation.Y, PlayerLocation.Z, 0.f));
 }
 
 void UMapFogVisualComponent::HideGrassInFog()
 {
 	const FVector Center = GetOwner()->GetActorLocation();
-	const FBox Safe(FVector(Center.X - CurrentHalfExtent, Center.Y - CurrentHalfExtent, -UE_BIG_NUMBER),
-		FVector(Center.X + CurrentHalfExtent, Center.Y + CurrentHalfExtent, UE_BIG_NUMBER));
 
 	for (TActorIterator<AActor> It(GetWorld(), GrassAreaClass); It; ++It)
 	{
@@ -132,9 +134,11 @@ void UMapFogVisualComponent::HideGrassInFog()
 
 		FVector Origin, Extent;
 		Area->GetActorBounds(false, Origin, Extent);
-		if (!Safe.Intersect(FBox(Origin - Extent, Origin + Extent)))
+		// Area box fully outside the safe circle = its closest point to the centre lies beyond the radius.
+		const FVector Closest = FBox(Origin - Extent, Origin + Extent).GetClosestPointTo(Center);
+		if (FVector::DistSquared2D(Closest, Center) > FMath::Square(CurrentRadius))
 		{
-			// The safe square only shrinks, so hidden areas stay hidden.
+			// The safe circle only shrinks, so hidden areas stay hidden.
 			Area->SetActorHiddenInGame(true);
 		}
 	}

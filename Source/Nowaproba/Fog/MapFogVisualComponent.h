@@ -12,28 +12,21 @@ struct NOWAPROBA_API FFogLevelLook
 {
 	GENERATED_BODY()
 
-	/** Density multiplier (0..1); 1 = dense enough to hide the ground. */
+	/** Mist density multiplier (0..1). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fog", meta = (ClampMin = "0", ClampMax = "1"))
-	float Opacity = 0.12f;
+	float Opacity = 0.5f;
 
-	/** Height above BaseZ (cm) of the dense core in deep fog (scaled down along the edge ramp). */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fog", meta = (ClampMin = "0"))
-	float FullHeight = 0.f;
-
-	/** Average height above BaseZ (cm) of the puffy bank top in deep fog; puffs vary it about 0.15x..1.4x. */
+	/** Height above BaseZ (cm) the ground mist reaches in deep fog (halved at the safe circle's edge); mist layers end at 45 cm. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fog", meta = (ClampMin = "1"))
-	float FadeHeight = 250.f;
-
-	/** 0..1 strength of the moving cloud blobs. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fog", meta = (ClampMin = "0", ClampMax = "1"))
-	float CloudStrength = 1.f;
+	float MaxHeight = 50.f;
 };
 
 /**
- * Stylised fog look for BP_MapFog. The owner's Blueprint calls SetFogState every tick with the safe square's half
- * extent and the current fog level; the owner's location is the square centre. Writes everything to MPC_MapFog
- * (read by the fog post-process and the fog walls; the grass material reads GrassCollection), blends between level looks, fades the
- * "player in fog" vignette, and from GrassHideLevel on hides grass areas lying completely in the fog.
+ * Ground mist look for BP_MapFog. The owner's Blueprint calls SetFogState every tick with the safe circle's radius
+ * and the current fog level; the owner's location is the circle centre. Writes everything to MPC_MapFog
+ * (read by the MistLayer planes via MI_MapGroundMist and by the camera post-process; the grass material reads GrassCollection),
+ * blends between level looks, fades the "player in fog" camera effect, and from GrassHideLevel on hides grass areas lying
+ * completely in the fog.
  */
 UCLASS(ClassGroup = (Gameplay), meta = (BlueprintSpawnableComponent))
 class NOWAPROBA_API UMapFogVisualComponent : public UActorComponent
@@ -45,8 +38,13 @@ public:
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	/** HalfExtent = radius of the safe circle (the Blueprint keeps its LevelHalfExtents naming). */
 	UFUNCTION(BlueprintCallable, Category = "Fog")
 	void SetFogState(float HalfExtent, int32 FogLevel);
+
+	/** True when Location lies outside the safe circle; false until the first SetFogState. */
+	UFUNCTION(BlueprintPure, Category = "Fog")
+	bool IsInFog(const FVector& Location) const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -59,26 +57,27 @@ protected:
 	TArray<FFogLevelLook> LevelLooks;
 
 	UPROPERTY(EditAnywhere, Category = "Fog")
-	FLinearColor FogColor = FLinearColor(0.95f, 0.78f, 0.98f);
+	FLinearColor FogColor = FLinearColor(0.85f, 0.55f, 1.f);
 
 	/** Ground height the fog heights are measured from. */
 	UPROPERTY(EditAnywhere, Category = "Fog")
 	float BaseZ = 0.f;
 
-	/** Width (cm) of the concave ramp behind the safe square's edge: low wisps first, full bank height at the end. */
+	/** Width (cm) of the thinner, lower mist band behind the safe circle's edge. */
 	UPROPERTY(EditAnywhere, Category = "Fog", meta = (ClampMin = "1"))
 	float EdgeWidth = 1500.f;
 
-	/** Number of toon bands; 0 = smooth. */
-	UPROPERTY(EditAnywhere, Category = "Fog", meta = (ClampMin = "0"))
-	float Steps = 5.f;
+	/** Mist density right at the safe circle's edge, relative to deep fog. */
+	UPROPERTY(EditAnywhere, Category = "Fog", meta = (ClampMin = "0", ClampMax = "1"))
+	float EdgeDensity = 0.35f;
 
-	/** Size (cm) of the cloud blobs. */
+	/** World size (cm) of one tile of the mist cloud texture. */
 	UPROPERTY(EditAnywhere, Category = "Fog", meta = (ClampMin = "1"))
-	float CloudScale = 450.f;
+	float MistScale = 600.f;
 
+	/** Mist drift speed multiplier. */
 	UPROPERTY(EditAnywhere, Category = "Fog", meta = (ClampMin = "0"))
-	float CloudSpeed = 0.3f;
+	float MistSpeed = 1.f;
 
 	/** Seconds to blend to a new level's look. */
 	UPROPERTY(EditAnywhere, Category = "Fog", meta = (ClampMin = "0.01"))
@@ -87,6 +86,10 @@ protected:
 	/** Strength of the screen-edge tint while the player stands in the fog. */
 	UPROPERTY(EditAnywhere, Category = "Fog", meta = (ClampMin = "0", ClampMax = "1"))
 	float VignetteStrength = 0.5f;
+
+	/** How far things beyond ~8 m from the player fade toward the fog colour while the player stands in the fog. */
+	UPROPERTY(EditAnywhere, Category = "Fog", meta = (ClampMin = "0", ClampMax = "1"))
+	float HazeStrength = 0.2f;
 
 	/** From this fog level on, grass in the fog is hidden (areas fully in fog) or flattened by the grass material. */
 	UPROPERTY(EditAnywhere, Category = "Fog|Grass")
@@ -104,9 +107,10 @@ private:
 	FFogLevelLook CurrentLook;
 	FFogLevelLook FromLook;
 	float BlendAlpha = 1.f;
-	float CurrentHalfExtent = 0.f;
+	float CurrentRadius = 0.f;
 	int32 CurrentLevel = 0;
 	float PlayerInFog = 0.f;
+	FVector PlayerLocation = FVector::ZeroVector;
 	bool bLookInitialized = false;
 	FTimerHandle GrassTimer;
 
