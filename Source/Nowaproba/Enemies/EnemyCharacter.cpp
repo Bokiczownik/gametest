@@ -71,6 +71,11 @@ void AEnemyCharacter::SetChaseSpeed(bool bChasing)
 	GetCharacterMovement()->MaxWalkSpeed = bChasing ? ChaseSpeed : PatrolWalkSpeed;
 }
 
+void AEnemyCharacter::UpdateHunterChaseSpeed(float DistanceToPlayer)
+{
+	GetCharacterMovement()->MaxWalkSpeed = DistanceToPlayer <= HunterNearDistance ? ChaseSpeed : HunterFarSpeed;
+}
+
 void AEnemyCharacter::HandleDeath()
 {
 	Attack->CancelAttack();

@@ -56,6 +56,9 @@ public:
 	/** Uses ChaseSpeed while chasing, else PatrolWalkSpeed. */
 	void SetChaseSpeed(bool bChasing);
 
+	/** Fog hunter chase: ChaseSpeed within HunterNearDistance of the player, HunterFarSpeed farther away. */
+	void UpdateHunterChaseSpeed(float DistanceToPlayer);
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy")
 	EEnemyBehaviour Behaviour = EEnemyBehaviour::Chase;
 
@@ -82,6 +85,14 @@ public:
 	/** Walk speed while patrolling or returning to the post (chasing uses the movement component's MaxWalkSpeed). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy", meta = (ClampMin = "0"))
 	float PatrolWalkSpeed = 200.f;
+
+	/** Fog hunter chase speed while farther than HunterNearDistance from the player. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Fog Hunter", meta = (ClampMin = "0"))
+	float HunterFarSpeed = 250.f;
+
+	/** Within this distance of the player a fog hunter chases at full speed (the movement component's MaxWalkSpeed). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Fog Hunter", meta = (ClampMin = "0"))
+	float HunterNearDistance = 4000.f;
 
 	/** Guard fights only while the player is within this distance of its post. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Guard", meta = (ClampMin = "0", EditCondition = "Behaviour == EEnemyBehaviour::Guard"))

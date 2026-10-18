@@ -106,6 +106,11 @@ void AEnemyAIController::UpdateBehaviour()
 		return;
 	}
 
+	if (bHunter)
+	{
+		Self->UpdateHunterChaseSpeed(Distance);
+	}
+
 	// Stop a bit inside the attack range so the next update can attack.
 	MoveToActor(Player, Attack->GetAttackRange() * 0.6f);
 }

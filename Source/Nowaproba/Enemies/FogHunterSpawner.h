@@ -59,10 +59,10 @@ protected:
 	float SpawnInterval = 3.f;
 
 	UPROPERTY(EditAnywhere, Category = "Fog Hunter", meta = (ClampMin = "0"))
-	float SpawnDistanceMin = 1500.f;
+	float SpawnDistanceMin = 3000.f;
 
 	UPROPERTY(EditAnywhere, Category = "Fog Hunter", meta = (ClampMin = "0"))
-	float SpawnDistanceMax = 2500.f;
+	float SpawnDistanceMax = 4500.f;
 
 	/** Spawn points lie at least this far past the safe circle's edge. */
 	UPROPERTY(EditAnywhere, Category = "Fog Hunter", meta = (ClampMin = "0"))
@@ -70,7 +70,7 @@ protected:
 
 	/** Hunters not chasing and farther than this from the player are removed (frees the slot). */
 	UPROPERTY(EditAnywhere, Category = "Fog Hunter", meta = (ClampMin = "0"))
-	float DespawnDistance = 4000.f;
+	float DespawnDistance = 7000.f;
 
 	/** Random points tried per spawn before giving up until the next check. */
 	UPROPERTY(EditAnywhere, Category = "Fog Hunter", meta = (ClampMin = "1"))
