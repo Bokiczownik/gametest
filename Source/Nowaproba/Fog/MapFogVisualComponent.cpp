@@ -43,6 +43,11 @@ bool UMapFogVisualComponent::IsInFog(const FVector& Location) const
 	return bLookInitialized && FVector::DistSquared2D(Location, GetOwner()->GetActorLocation()) > FMath::Square(CurrentRadius);
 }
 
+float UMapFogVisualComponent::GetDistanceIntoFog(const FVector& Location) const
+{
+	return bLookInitialized ? FVector::Dist2D(Location, GetOwner()->GetActorLocation()) - CurrentRadius : -MAX_flt;
+}
+
 void UMapFogVisualComponent::SetFogState(float HalfExtent, int32 FogLevel)
 {
 	CurrentRadius = HalfExtent;

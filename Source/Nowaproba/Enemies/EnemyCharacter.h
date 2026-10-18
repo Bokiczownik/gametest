@@ -4,6 +4,7 @@
 #include "GameFramework/Character.h"
 #include "EnemyCharacter.generated.h"
 
+class AFogHunterSpawner;
 class UDataTable;
 class UEnemyAttackComponent;
 class UHealthComponent;
@@ -17,7 +18,9 @@ enum class EEnemyBehaviour : uint8
 	/** Walks PatrolPoints in a loop, chases when it notices the player, then resumes the route. */
 	Patrol,
 	/** Holds its spawn position; only fights while the player is within GuardRadius of it, then walks back. */
-	Guard
+	Guard,
+	/** Spawned in the fog by AFogHunterSpawner; knows where the player is and chases inside the spawner's hunt area, else walks back into the fog. */
+	FogHunter
 };
 
 /**
@@ -45,6 +48,10 @@ public:
 	/** Spawn location and facing; the guard's post. */
 	const FVector& GetHomeLocation() const { return HomeLocation; }
 	const FRotator& GetHomeRotation() const { return HomeRotation; }
+
+	/** Set by AFogHunterSpawner before FinishSpawning. */
+	void SetHunterSpawner(AFogHunterSpawner* InSpawner);
+	AFogHunterSpawner* GetHunterSpawner() const;
 
 	/** Uses ChaseSpeed while chasing, else PatrolWalkSpeed. */
 	void SetChaseSpeed(bool bChasing);
@@ -108,6 +115,7 @@ private:
 	FVector HomeLocation = FVector::ZeroVector;
 	FRotator HomeRotation = FRotator::ZeroRotator;
 	float ChaseSpeed = 0.f;
+	TWeakObjectPtr<AFogHunterSpawner> HunterSpawner;
 
 	UFUNCTION()
 	void HandleDeath();

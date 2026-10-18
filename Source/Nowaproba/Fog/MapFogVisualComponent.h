@@ -46,6 +46,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Fog")
 	bool IsInFog(const FVector& Location) const;
 
+	/** 2D distance (cm) from the safe circle's edge into the fog: positive in the fog, negative inside the circle; -MAX_flt until the first SetFogState. */
+	UFUNCTION(BlueprintPure, Category = "Fog")
+	float GetDistanceIntoFog(const FVector& Location) const;
+
+	/** Fog level from the last SetFogState. */
+	UFUNCTION(BlueprintPure, Category = "Fog")
+	int32 GetFogLevel() const { return CurrentLevel; }
+
 protected:
 	virtual void BeginPlay() override;
 

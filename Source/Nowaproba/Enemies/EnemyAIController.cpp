@@ -2,6 +2,7 @@
 
 #include "EnemyAttackComponent.h"
 #include "EnemyCharacter.h"
+#include "FogHunterSpawner.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "Navigation/PathFollowingComponent.h"
@@ -71,15 +72,16 @@ void AEnemyAIController::UpdateBehaviour()
 		return;
 	}
 
+	const bool bHunter = Self->Behaviour == EEnemyBehaviour::FogHunter;
 	const float Distance = FVector::Dist(Self->GetActorLocation(), Player->GetActorLocation());
 	if (!bChasing)
 	{
-		if ((bAlerted || CanSee(Player)) && CanEngage(Player))
+		if ((bHunter || bAlerted || CanSee(Player)) && CanEngage(Player))
 		{
 			SetChasing(true);
 		}
 	}
-	else if (Distance > Self->LoseAggroRange || !CanEngage(Player))
+	else if ((!bHunter && Distance > Self->LoseAggroRange) || !CanEngage(Player))
 	{
 		SetChasing(false);
 	}
@@ -90,7 +92,8 @@ void AEnemyAIController::UpdateBehaviour()
 		switch (Self->Behaviour)
 		{
 		case EEnemyBehaviour::Patrol: UpdatePatrol(); break;
-		case EEnemyBehaviour::Guard: UpdateGuard(); break;
+		case EEnemyBehaviour::Guard:
+		case EEnemyBehaviour::FogHunter: ReturnHome(); break;
 		default: break;
 		}
 		return;
@@ -129,8 +132,18 @@ bool AEnemyAIController::CanSee(const APawn* Player) const
 bool AEnemyAIController::CanEngage(const APawn* Player) const
 {
 	const AEnemyCharacter* Self = Enemy.Get();
-	return Self->Behaviour != EEnemyBehaviour::Guard
-		|| FVector::Dist2D(Player->GetActorLocation(), Self->GetHomeLocation()) <= Self->GuardRadius;
+	switch (Self->Behaviour)
+	{
+	case EEnemyBehaviour::Guard:
+		return FVector::Dist2D(Player->GetActorLocation(), Self->GetHomeLocation()) <= Self->GuardRadius;
+	case EEnemyBehaviour::FogHunter:
+	{
+		const AFogHunterSpawner* Spawner = Self->GetHunterSpawner();
+		return !Spawner || Spawner->IsInHuntArea(Player->GetActorLocation());
+	}
+	default:
+		return true;
+	}
 }
 
 void AEnemyAIController::SetChasing(bool bNewChasing)
@@ -183,7 +196,7 @@ void AEnemyAIController::UpdatePatrol()
 	}
 }
 
-void AEnemyAIController::UpdateGuard()
+void AEnemyAIController::ReturnHome()
 {
 	AEnemyCharacter* Self = Enemy.Get();
 	if (FVector::Dist2D(Self->GetActorLocation(), Self->GetHomeLocation()) > ArriveDistance)

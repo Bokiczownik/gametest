@@ -5,6 +5,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "EnemyAIController.h"
 #include "EnemyAttackComponent.h"
+#include "FogHunterSpawner.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "../Health/HealthComponent.h"
 #include "../Loot/LootLibrary.h"
@@ -53,6 +54,16 @@ void AEnemyCharacter::BeginPlay()
 
 	Attack->SetTelegraph(AttackTelegraph);
 	Health->OnDeath.AddUniqueDynamic(this, &AEnemyCharacter::HandleDeath);
+}
+
+void AEnemyCharacter::SetHunterSpawner(AFogHunterSpawner* InSpawner)
+{
+	HunterSpawner = InSpawner;
+}
+
+AFogHunterSpawner* AEnemyCharacter::GetHunterSpawner() const
+{
+	return HunterSpawner.Get();
 }
 
 void AEnemyCharacter::SetChaseSpeed(bool bChasing)

@@ -11,7 +11,9 @@ class AEnemyCharacter;
  * inside the SightHalfAngle cone with line of sight (or when damaged), chases it on the NavMesh, attacks inside the
  * attack range and gives up beyond LoseAggroRange. While not chasing it follows the enemy's Behaviour: Chase stands,
  * Patrol walks the route in a loop with a pause at each point, Guard returns to its post and faces the spawn direction
- * (and only engages while the player is within GuardRadius of the post). Stops when the enemy or the player is dead.
+ * (and only engages while the player is within GuardRadius of the post), FogHunter needs no sight or range check, chases
+ * while its spawner's IsInHuntArea allows it and otherwise walks back to its spawn point in the fog.
+ * Stops when the enemy or the player is dead.
  */
 UCLASS()
 class NOWAPROBA_API AEnemyAIController : public AAIController
@@ -44,7 +46,7 @@ private:
 	bool CanEngage(const APawn* Player) const;
 	void SetChasing(bool bNewChasing);
 	void UpdatePatrol();
-	void UpdateGuard();
+	void ReturnHome();
 	void StopChase();
 
 	UFUNCTION()
