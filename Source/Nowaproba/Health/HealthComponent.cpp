@@ -1,6 +1,8 @@
 #include "HealthComponent.h"
 
+#include "AbilitySystemComponent.h"
 #include "Animation/AnimationAsset.h"
+#include "../Combat/CombatAttributeSet.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -15,7 +17,21 @@ void UHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SetHealth(MaxHealth);
+	AbilitySystem = GetOwner()->FindComponentByClass<UAbilitySystemComponent>();
+	if (AbilitySystem && AbilitySystem->HasAttributeSetForAttribute(UCombatAttributeSet::GetHealthAttribute()))
+	{
+		AbilitySystem->SetNumericAttributeBase(UCombatAttributeSet::GetMaxHealthAttribute(), MaxHealth);
+		AbilitySystem->SetNumericAttributeBase(UCombatAttributeSet::GetHealthAttribute(), MaxHealth);
+		AbilitySystem->GetGameplayAttributeValueChangeDelegate(UCombatAttributeSet::GetHealthAttribute()).AddUObject(this, &UHealthComponent::HandleHealthAttributeChanged);
+		AbilitySystem->GetGameplayAttributeValueChangeDelegate(UCombatAttributeSet::GetMaxHealthAttribute()).AddUObject(this, &UHealthComponent::HandleHealthAttributeChanged);
+		CurrentHealth = MaxHealth;
+		OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
+	}
+	else
+	{
+		AbilitySystem = nullptr;
+		SetHealth(MaxHealth);
+	}
 	GetOwner()->OnTakeAnyDamage.AddUniqueDynamic(this, &UHealthComponent::HandleTakeAnyDamage);
 }
 
@@ -23,6 +39,13 @@ void UHealthComponent::ApplyHealthDamage(float Amount)
 {
 	if (bDead || Amount <= 0.f)
 	{
+		return;
+	}
+
+	if (AbilitySystem)
+	{
+		// Goes through the Damage meta attribute (invulnerability); death is handled by HandleHealthAttributeChanged.
+		AbilitySystem->ApplyModToAttribute(UCombatAttributeSet::GetDamageAttribute(), EGameplayModOp::Additive, Amount);
 		return;
 	}
 
@@ -35,15 +58,29 @@ void UHealthComponent::ApplyHealthDamage(float Amount)
 
 void UHealthComponent::Heal(float Amount)
 {
-	if (!bDead && Amount > 0.f)
+	if (bDead || Amount <= 0.f)
 	{
-		SetHealth(CurrentHealth + Amount);
+		return;
 	}
+
+	if (AbilitySystem)
+	{
+		AbilitySystem->ApplyModToAttribute(UCombatAttributeSet::GetHealthAttribute(), EGameplayModOp::Additive, Amount);
+		return;
+	}
+
+	SetHealth(CurrentHealth + Amount);
 }
 
 void UHealthComponent::SetMaxHealth(float NewMaxHealth)
 {
 	MaxHealth = FMath::Max(1.f, NewMaxHealth);
+	if (AbilitySystem)
+	{
+		AbilitySystem->SetNumericAttributeBase(UCombatAttributeSet::GetMaxHealthAttribute(), MaxHealth);
+		return;
+	}
+
 	SetHealth(CurrentHealth);
 	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
 }
@@ -58,6 +95,18 @@ void UHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage, c
 	APawn* InstigatorPawn = InstigatedBy ? InstigatedBy->GetPawn() : nullptr;
 	LastDamageInstigator = InstigatorPawn ? InstigatorPawn : Cast<APawn>(DamageCauser);
 	ApplyHealthDamage(Damage);
+}
+
+void UHealthComponent::HandleHealthAttributeChanged(const FOnAttributeChangeData& Data)
+{
+	CurrentHealth = AbilitySystem->GetNumericAttribute(UCombatAttributeSet::GetHealthAttribute());
+	MaxHealth = AbilitySystem->GetNumericAttribute(UCombatAttributeSet::GetMaxHealthAttribute());
+	OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
+
+	if (!bDead && CurrentHealth <= 0.f)
+	{
+		Die();
+	}
 }
 
 void UHealthComponent::SetHealth(float NewHealth)

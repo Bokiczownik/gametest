@@ -6,8 +6,10 @@
 
 class AController;
 class APawn;
+class UAbilitySystemComponent;
 class UAnimationAsset;
 class UDamageType;
+struct FOnAttributeChangeData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged, float, CurrentHealth, float, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeath);
@@ -16,6 +18,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeath);
  * Health pool on the owning actor. Takes damage from the engine damage system (UGameplayStatics::ApplyDamage /
  * OnTakeAnyDamage) or directly via ApplyHealthDamage. At 0 the owner dies once: OnDeath fires, character movement
  * stops and DeathAnimation (if set) plays and holds its last frame.
+ * If the owner has a UCombatAbilitySystemComponent, health lives in UCombatAttributeSet (Health / MaxHealth, damage via
+ * the Damage meta attribute, so gameplay effects and invulnerability apply); this component mirrors it.
  */
 UCLASS(ClassGroup = (Gameplay), meta = (BlueprintSpawnableComponent))
 class NOWAPROBA_API UHealthComponent : public UActorComponent
@@ -70,6 +74,12 @@ private:
 	float CurrentHealth = 0.f;
 	bool bDead = false;
 	TWeakObjectPtr<APawn> LastDamageInstigator;
+
+	/** Set when health is stored in the owner's combat attributes. */
+	UPROPERTY()
+	TObjectPtr<UAbilitySystemComponent> AbilitySystem;
+
+	void HandleHealthAttributeChanged(const FOnAttributeChangeData& Data);
 
 	UFUNCTION()
 	void HandleTakeAnyDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);

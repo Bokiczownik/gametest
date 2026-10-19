@@ -5,6 +5,7 @@
 #include "EnemyCharacter.generated.h"
 
 class AFogHunterSpawner;
+class UCombatAbilitySystemComponent;
 class UDataTable;
 class UEnemyAttackComponent;
 class UHealthComponent;
@@ -103,6 +104,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
 	TObjectPtr<UHealthComponent> Health;
+
+	/** Combat attributes (health storage) and abilities. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
+	TObjectPtr<UCombatAbilitySystemComponent> AbilitySystem;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
 	TObjectPtr<UEnemyAttackComponent> Attack;

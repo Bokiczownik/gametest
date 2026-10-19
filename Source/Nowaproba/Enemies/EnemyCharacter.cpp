@@ -1,6 +1,7 @@
 #include "EnemyCharacter.h"
 
 #include "AIController.h"
+#include "../Combat/CombatAbilitySystemComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EnemyAIController.h"
@@ -24,6 +25,7 @@ AEnemyCharacter::AEnemyCharacter()
 	GetCharacterMovement()->MaxWalkSpeed = 450.f;
 
 	Health = CreateDefaultSubobject<UHealthComponent>(TEXT("Health"));
+	AbilitySystem = CreateDefaultSubobject<UCombatAbilitySystemComponent>(TEXT("AbilitySystem"));
 	Attack = CreateDefaultSubobject<UEnemyAttackComponent>(TEXT("Attack"));
 
 	AttackTelegraph = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AttackTelegraph"));

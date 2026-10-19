@@ -4,6 +4,9 @@
 #include "Components/ActorComponent.h"
 #include "StaminaComponent.generated.h"
 
+class UAbilitySystemComponent;
+struct FOnAttributeChangeData;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStaminaChanged, float, CurrentStamina, float, MaxStamina);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStaminaDepleted);
 
@@ -13,6 +16,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStaminaDepleted);
  * regeneration starts after RegenDelay seconds. Max stamina = (BaseMaxStamina + MaxStaminaBonus) * MaxStaminaMultiplier,
  * so items / character level can change it through SetMaxStaminaBonus / SetMaxStaminaMultiplier.
  * Ticks only while draining or regenerating.
+ * If the owner has a UCombatAbilitySystemComponent, stamina lives in UCombatAttributeSet (Stamina / MaxStamina); spending
+ * it there (e.g. ability costs) also restarts the regen delay.
  */
 UCLASS(ClassGroup = (Gameplay), meta = (BlueprintSpawnableComponent))
 class NOWAPROBA_API UStaminaComponent : public UActorComponent
@@ -86,6 +91,13 @@ private:
 	float MaxStamina = 0.f;
 	float RegenDelayRemaining = 0.f;
 	bool bDraining = false;
+	bool bWritingStaminaAttribute = false;
+
+	/** Set when stamina is stored in the owner's combat attributes. */
+	UPROPERTY()
+	TObjectPtr<UAbilitySystemComponent> AbilitySystem;
+
+	void HandleStaminaAttributeChanged(const FOnAttributeChangeData& Data);
 
 	void RecalculateMaxStamina();
 	void SetStamina(float NewStamina);

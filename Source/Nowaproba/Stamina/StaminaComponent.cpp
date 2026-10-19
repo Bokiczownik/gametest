@@ -1,5 +1,7 @@
 #include "StaminaComponent.h"
 
+#include "AbilitySystemComponent.h"
+#include "../Combat/CombatAttributeSet.h"
 #include "GameFramework/Actor.h"
 
 UStaminaComponent::UStaminaComponent()
@@ -11,6 +13,17 @@ UStaminaComponent::UStaminaComponent()
 void UStaminaComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	AbilitySystem = GetOwner()->FindComponentByClass<UAbilitySystemComponent>();
+	if (AbilitySystem && AbilitySystem->HasAttributeSetForAttribute(UCombatAttributeSet::GetStaminaAttribute()))
+	{
+		AbilitySystem->SetNumericAttributeBase(UCombatAttributeSet::GetStaminaAttribute(), 0.f);
+		AbilitySystem->GetGameplayAttributeValueChangeDelegate(UCombatAttributeSet::GetStaminaAttribute()).AddUObject(this, &UStaminaComponent::HandleStaminaAttributeChanged);
+	}
+	else
+	{
+		AbilitySystem = nullptr;
+	}
 
 	RecalculateMaxStamina();
 	SetStamina(MaxStamina);
@@ -80,6 +93,10 @@ void UStaminaComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 void UStaminaComponent::RecalculateMaxStamina()
 {
 	MaxStamina = FMath::Max(1.f, (BaseMaxStamina + MaxStaminaBonus) * MaxStaminaMultiplier);
+	if (AbilitySystem)
+	{
+		AbilitySystem->SetNumericAttributeBase(UCombatAttributeSet::GetMaxStaminaAttribute(), MaxStamina);
+	}
 	SetStamina(CurrentStamina);
 	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
 	UpdateTickEnabled();
@@ -93,8 +110,28 @@ void UStaminaComponent::SetStamina(float NewStamina)
 		return;
 	}
 
+	if (AbilitySystem)
+	{
+		// HandleStaminaAttributeChanged updates CurrentStamina and broadcasts.
+		TGuardValue<bool> Writing(bWritingStaminaAttribute, true);
+		AbilitySystem->SetNumericAttributeBase(UCombatAttributeSet::GetStaminaAttribute(), NewStamina);
+		return;
+	}
+
 	CurrentStamina = NewStamina;
 	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
+}
+
+void UStaminaComponent::HandleStaminaAttributeChanged(const FOnAttributeChangeData& Data)
+{
+	CurrentStamina = Data.NewValue;
+	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina);
+
+	if (!bWritingStaminaAttribute && Data.NewValue < Data.OldValue)
+	{
+		RegenDelayRemaining = RegenDelay;
+		UpdateTickEnabled();
+	}
 }
 
 void UStaminaComponent::UpdateTickEnabled()
