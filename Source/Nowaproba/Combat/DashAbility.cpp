@@ -14,6 +14,7 @@
 UDashAbility::UDashAbility()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	CancelAbilitiesWithTag.AddTag(CombatTags::Ability_Attack);
 }
 
 float UDashAbility::GetDashCooldownProgress(const UAbilitySystemComponent* AbilitySystem)

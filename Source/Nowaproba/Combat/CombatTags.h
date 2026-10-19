@@ -10,4 +10,7 @@ namespace CombatTags
 
 	/** Granted by the dash cooldown effect. */
 	NOWAPROBA_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Dash);
+
+	/** Weapon attacks (cancelled by the dash). */
+	NOWAPROBA_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Attack);
 }
