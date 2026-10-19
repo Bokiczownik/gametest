@@ -1,7 +1,33 @@
 #include "CombatAttributeSet.h"
 
 #include "CombatTags.h"
+#include "GameplayEffect.h"
 #include "GameplayEffectExtension.h"
+
+void UCombatAttributeSet::ApplyDamage(UAbilitySystemComponent* Target, float InDamage, float InPoiseDamage)
+{
+	if (!Target || (InDamage <= 0.f && InPoiseDamage <= 0.f))
+	{
+		return;
+	}
+
+	UGameplayEffect* Effect = NewObject<UGameplayEffect>(GetTransientPackage());
+	Effect->DurationPolicy = EGameplayEffectDurationType::Instant;
+	auto AddModifier = [Effect](const FGameplayAttribute& Attribute, float Magnitude)
+	{
+		if (Magnitude > 0.f)
+		{
+			FGameplayModifierInfo& Modifier = Effect->Modifiers.AddDefaulted_GetRef();
+			Modifier.Attribute = Attribute;
+			Modifier.ModifierOp = EGameplayModOp::Additive;
+			Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Magnitude));
+		}
+	};
+	AddModifier(GetDamageAttribute(), InDamage);
+	AddModifier(GetPoiseDamageAttribute(), InPoiseDamage);
+
+	Target->ApplyGameplayEffectSpecToSelf(FGameplayEffectSpec(Effect, Target->MakeEffectContext(), 1.f));
+}
 
 void UCombatAttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const
 {

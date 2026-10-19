@@ -13,7 +13,7 @@
 
 /**
  * Combat attributes shared by the player and enemies (GAS).
- * Damage / PoiseDamage are meta attributes: effects write incoming damage there and PostGameplayEffectExecute moves it
+ * Damage / PoiseDamage are meta attributes: effects (ApplyDamage) write incoming damage there and PostGameplayEffectExecute moves it
  * into Health / Poise. Damage is ignored while the owner has the State.Invulnerable tag (e.g. during a dash).
  * UHealthComponent / UStaminaComponent keep their own API and use these attributes as storage when the owner has an ASC.
  */
@@ -57,6 +57,12 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Combat|Meta")
 	FGameplayAttributeData PoiseDamage = 0.f;
 	COMBAT_ATTRIBUTE_ACCESSORS(UCombatAttributeSet, PoiseDamage)
+
+	/**
+	 * Applies Damage / PoiseDamage to Target through an instant gameplay effect, so PostGameplayEffectExecute runs
+	 * (invulnerability, clamping). Use this instead of ApplyModToAttribute, which only sets base values.
+	 */
+	static void ApplyDamage(UAbilitySystemComponent* Target, float InDamage, float InPoiseDamage);
 
 	virtual void PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const override;
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;

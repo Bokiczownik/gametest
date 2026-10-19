@@ -45,7 +45,7 @@ void UHealthComponent::ApplyHealthDamage(float Amount)
 	if (AbilitySystem)
 	{
 		// Goes through the Damage meta attribute (invulnerability); death is handled by HandleHealthAttributeChanged.
-		AbilitySystem->ApplyModToAttribute(UCombatAttributeSet::GetDamageAttribute(), EGameplayModOp::Additive, Amount);
+		UCombatAttributeSet::ApplyDamage(AbilitySystem, Amount, 0.f);
 		return;
 	}
 

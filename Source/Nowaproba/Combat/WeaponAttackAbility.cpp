@@ -67,10 +67,11 @@ void UWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	}
 
 	const FVector AttackDirection = FaceCursor(Character, WeaponComponent->GetWeaponData()->AttackFacingYawOffset);
-	if (AController* Controller = Character->GetController())
+	UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
+	if (Movement->bOrientRotationToMovement)
 	{
-		Controller->SetIgnoreMoveInput(true);
-		bIgnoringMoveInput = true;
+		Movement->bOrientRotationToMovement = false;
+		bRestoreOrientToMovement = true;
 	}
 
 	const float AnimLength = Attack->Animation->GetPlayLength();
@@ -106,15 +107,12 @@ void UWeaponAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, c
 		Avatar->GetWorldTimerManager().ClearTimer(EndTimer);
 	}
 
-	if (bIgnoringMoveInput)
+	if (bRestoreOrientToMovement)
 	{
-		bIgnoringMoveInput = false;
-		if (const APawn* Pawn = Cast<APawn>(ActorInfo->AvatarActor.Get()))
+		bRestoreOrientToMovement = false;
+		if (const ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get()))
 		{
-			if (AController* Controller = Pawn->GetController())
-			{
-				Controller->SetIgnoreMoveInput(false);
-			}
+			Character->GetCharacterMovement()->bOrientRotationToMovement = true;
 		}
 	}
 

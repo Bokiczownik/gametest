@@ -276,8 +276,8 @@ void UWeaponComponent::ApplyHit(AActor* Target)
 	UGameplayStatics::ApplyDamage(Target, CurrentAttack->Damage, OwnerPawn ? OwnerPawn->GetController() : nullptr, GetOwner(), nullptr);
 
 	UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
-	if (CurrentAttack->PoiseDamage > 0.f && TargetASC && TargetASC->HasAttributeSetForAttribute(UCombatAttributeSet::GetPoiseDamageAttribute()))
+	if (TargetASC && TargetASC->HasAttributeSetForAttribute(UCombatAttributeSet::GetPoiseDamageAttribute()))
 	{
-		TargetASC->ApplyModToAttribute(UCombatAttributeSet::GetPoiseDamageAttribute(), EGameplayModOp::Additive, CurrentAttack->PoiseDamage);
+		UCombatAttributeSet::ApplyDamage(TargetASC, 0.f, CurrentAttack->PoiseDamage);
 	}
 }
