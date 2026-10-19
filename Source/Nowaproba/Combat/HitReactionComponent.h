@@ -14,7 +14,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStaggered);
 
 /**
  * How the owner reacts to being hit: overlays HitFlashMaterial on its mesh for a moment when it loses health, takes
- * knockback (ApplyKnockback, called by the attacker) and staggers when its Poise attribute (UCombatAttributeSet) hits 0.
+ * knockback (ApplyKnockback, called by the attacker; ignored while State.Invulnerable) and staggers when its Poise attribute (UCombatAttributeSet) hits 0.
  * Staggered = tag State.Staggered (blocks attack / dash abilities), running Ability.Attack abilities are cancelled,
  * StaggerAnimation plays, a player cannot move and an AI stops moving, for StaggerDuration; OnStaggered lets the owner
  * cancel its own actions. Poise refills to MaxPoise after the stagger, or PoiseRegenDelay after the last poise damage.

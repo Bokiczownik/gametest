@@ -43,7 +43,8 @@ void UHitReactionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void UHitReactionComponent::ApplyKnockback(const FVector& Velocity)
 {
 	ACharacter* Character = Cast<ACharacter>(GetOwner());
-	if (!Character || KnockbackScale <= 0.f || (Health && Health->IsDead()))
+	if (!Character || KnockbackScale <= 0.f || (Health && Health->IsDead())
+		|| (AbilitySystem && AbilitySystem->HasMatchingGameplayTag(CombatTags::State_Invulnerable)))
 	{
 		return;
 	}
@@ -96,6 +97,9 @@ void UHitReactionComponent::StartStagger()
 	const FGameplayTagContainer AttackTags(CombatTags::Ability_Attack);
 	AbilitySystem->CancelAbilities(&AttackTags);
 
+	// Before the stagger animation, so owners can stop their own montages (e.g. an enemy attack) first.
+	OnStaggered.Broadcast();
+
 	ACharacter* Character = Cast<ACharacter>(GetOwner());
 	if (Character)
 	{
@@ -116,7 +120,6 @@ void UHitReactionComponent::StartStagger()
 		}
 	}
 
-	OnStaggered.Broadcast();
 	GetWorld()->GetTimerManager().SetTimer(StaggerTimer, this, &UHitReactionComponent::EndStagger, StaggerDuration);
 }
 
