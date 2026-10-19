@@ -56,7 +56,8 @@ bool UDashAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 void UDashAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	// Cooldown is committed in EndAbility, so it counts from the end of the dash.
+	if (!CommitAbilityCost(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
@@ -90,8 +91,9 @@ void UDashAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 void UDashAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	if (bInvulnerabilityAdded)
+	if (bInvulnerabilityAdded) // the dash actually started
 	{
+		CommitAbilityCooldown(Handle, ActorInfo, ActivationInfo, true);
 		bInvulnerabilityAdded = false;
 		ActorInfo->AbilitySystemComponent->RemoveLooseGameplayTag(CombatTags::State_Invulnerable);
 		if (const ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get()))

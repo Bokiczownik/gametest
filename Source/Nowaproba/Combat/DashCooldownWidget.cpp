@@ -34,7 +34,13 @@ void UDashCooldownWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
 
-	Progress = UDashAbility::GetDashCooldownProgress(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwningPlayerPawn()));
+	const float NewProgress = UDashAbility::GetDashCooldownProgress(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwningPlayerPawn()));
+	if (NewProgress != Progress)
+	{
+		// The widget has no child widgets that change, so Slate would keep the cached paint without this.
+		Progress = NewProgress;
+		Invalidate(EInvalidateWidgetReason::Paint);
+	}
 }
 
 int32 UDashCooldownWidget::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
