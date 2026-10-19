@@ -6,6 +6,7 @@
 
 class AFogHunterSpawner;
 class UCombatAbilitySystemComponent;
+class UHitReactionComponent;
 class UDataTable;
 class UEnemyAttackComponent;
 class UHealthComponent;
@@ -40,6 +41,7 @@ public:
 
 	UHealthComponent* GetHealth() const { return Health; }
 	UEnemyAttackComponent* GetAttack() const { return Attack; }
+	UHitReactionComponent* GetHitReaction() const { return HitReaction; }
 
 	bool IsDead() const;
 
@@ -109,6 +111,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
 	TObjectPtr<UCombatAbilitySystemComponent> AbilitySystem;
 
+	/** Hit flash, knockback and stagger (poise break cancels the current attack). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
+	TObjectPtr<UHitReactionComponent> HitReaction;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
 	TObjectPtr<UEnemyAttackComponent> Attack;
 
@@ -135,4 +141,7 @@ private:
 
 	UFUNCTION()
 	void HandleDeath();
+
+	UFUNCTION()
+	void HandleStaggered();
 };

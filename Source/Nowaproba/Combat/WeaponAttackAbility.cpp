@@ -19,6 +19,7 @@ UWeaponAttackAbility::UWeaponAttackAbility()
 	bRetriggerInstancedAbility = true;
 	SetAssetTags(FGameplayTagContainer(CombatTags::Ability_Attack));
 	ActivationBlockedTags.AddTag(CombatTags::State_Invulnerable);
+	ActivationBlockedTags.AddTag(CombatTags::State_Staggered);
 }
 
 UWeaponComponent* UWeaponAttackAbility::FindWeapon(const FGameplayAbilityActorInfo* ActorInfo)

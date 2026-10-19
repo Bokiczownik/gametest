@@ -45,6 +45,14 @@ struct FWeaponAttack
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Hit", meta = (ClampMin = "0"))
 	float PoiseDamage = 20.f;
 
+	/** Horizontal launch speed given to hit targets (cm/s), scaled by their UHitReactionComponent::KnockbackScale. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Hit", meta = (ClampMin = "0"))
+	float Knockback = 350.f;
+
+	/** Whole-game freeze on hit (real seconds). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Hit", meta = (ClampMin = "0"))
+	float HitStop = 0.06f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack", meta = (ClampMin = "0"))
 	float StaminaCost = 4.f;
 

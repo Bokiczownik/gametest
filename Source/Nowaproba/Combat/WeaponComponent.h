@@ -22,8 +22,9 @@ enum class EWeaponAttackType : uint8
  * attacks (tap = light combo, hold = heavy, while sprinting = sprint attack, in the air = jump attack), buffers input
  * pressed during an attack until its ChainTime, ignores attacks during the weapon's AttackCooldown after one ends, and sweeps the blade during the hit window (ticks only then).
  * Each attack is performed by AttackAbilityClass (UWeaponAttackAbility) on the owner's ability system.
- * Hits use the engine damage system (UGameplayStatics::ApplyDamage, so UHealthComponent and loot breakables react)
- * and apply PoiseDamage to targets with combat attributes. Each actor is hit once per attack.
+ * Hits use the engine damage system (UGameplayStatics::ApplyDamage, so UHealthComponent and loot breakables react),
+ * apply PoiseDamage to targets with combat attributes, knock back targets with a UHitReactionComponent and freeze the
+ * game for the attack's HitStop (global time dilation). Each actor is hit once per attack.
  */
 UCLASS(ClassGroup = (Gameplay), meta = (BlueprintSpawnableComponent))
 class NOWAPROBA_API UWeaponComponent : public UActorComponent
@@ -55,6 +56,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	TObjectPtr<UWeaponData> WeaponData;
@@ -85,6 +87,7 @@ private:
 	FTimerHandle HitStartTimer;
 	FTimerHandle HitEndTimer;
 	FTimerHandle ChainTimer;
+	FTimerHandle HitStopTimer;
 
 	void RequestAttack(EWeaponAttackType Type);
 	void StartAttack(EWeaponAttackType Type);
@@ -94,5 +97,7 @@ private:
 	void OpenChainWindow();
 	void SweepBlade();
 	void ApplyHit(AActor* Target);
+	void StartHitStop(float Duration);
+	void EndHitStop();
 	void GetBlade(FVector& OutStart, FVector& OutEnd) const;
 };

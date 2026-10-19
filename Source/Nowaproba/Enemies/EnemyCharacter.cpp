@@ -2,6 +2,7 @@
 
 #include "AIController.h"
 #include "../Combat/CombatAbilitySystemComponent.h"
+#include "../Combat/HitReactionComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EnemyAIController.h"
@@ -27,6 +28,7 @@ AEnemyCharacter::AEnemyCharacter()
 	Health = CreateDefaultSubobject<UHealthComponent>(TEXT("Health"));
 	AbilitySystem = CreateDefaultSubobject<UCombatAbilitySystemComponent>(TEXT("AbilitySystem"));
 	Attack = CreateDefaultSubobject<UEnemyAttackComponent>(TEXT("Attack"));
+	HitReaction = CreateDefaultSubobject<UHitReactionComponent>(TEXT("HitReaction"));
 
 	AttackTelegraph = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AttackTelegraph"));
 	AttackTelegraph->SetupAttachment(GetCapsuleComponent());
@@ -56,6 +58,7 @@ void AEnemyCharacter::BeginPlay()
 
 	Attack->SetTelegraph(AttackTelegraph);
 	Health->OnDeath.AddUniqueDynamic(this, &AEnemyCharacter::HandleDeath);
+	HitReaction->OnStaggered.AddUniqueDynamic(this, &AEnemyCharacter::HandleStaggered);
 }
 
 void AEnemyCharacter::SetHunterSpawner(AFogHunterSpawner* InSpawner)
@@ -76,6 +79,11 @@ void AEnemyCharacter::SetChaseSpeed(bool bChasing)
 void AEnemyCharacter::UpdateHunterChaseSpeed(float DistanceToPlayer)
 {
 	GetCharacterMovement()->MaxWalkSpeed = DistanceToPlayer <= HunterNearDistance ? ChaseSpeed : HunterFarSpeed;
+}
+
+void AEnemyCharacter::HandleStaggered()
+{
+	Attack->CancelAttack();
 }
 
 void AEnemyCharacter::HandleDeath()

@@ -11,7 +11,7 @@ struct FWeaponAttack;
  * Performs the attack chosen by the owner's UWeaponComponent (GetPendingAttack): faces the cursor, spends stamina,
  * plays the attack's animation range on DefaultSlot (upper body in ABP_Unarmed), steps forward (LungeDistance, ground
  * only) and keeps that facing while the owner can still walk (orient-to-movement is off until it ends). Retriggering (next combo hit) ends the running attack first. Tagged Ability.Attack (cancelled
- * by the dash); cannot start while State.Invulnerable (during a dash).
+ * by the dash); cannot start while State.Invulnerable (during a dash) or State.Staggered.
  */
 UCLASS()
 class NOWAPROBA_API UWeaponAttackAbility : public UGameplayAbility

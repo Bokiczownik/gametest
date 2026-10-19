@@ -10,7 +10,7 @@ class UGameplayEffect;
 /**
  * Dash with dodge properties: a short burst of DashDistance over DashDuration (root motion, no animation needed) in the
  * movement input direction, or towards the cursor when there is no input. While dashing the owner has
- * State.Invulnerable (no damage) and its capsule ignores pawns (passes through enemies). Cancels a running weapon attack.
+ * State.Invulnerable (no damage) and its capsule ignores pawns (passes through enemies). Cancels a running weapon attack; blocked while State.Staggered.
  * Costs StaminaCost; cooldown CooldownDuration starts when the dash ends and is a runtime gameplay effect granting Cooldown.Dash (read by
  * GetDashCooldownProgress for the HUD). Grant via UCombatAbilitySystemComponent::DefaultAbilities and activate with
  * TryActivateAbilityByClass.

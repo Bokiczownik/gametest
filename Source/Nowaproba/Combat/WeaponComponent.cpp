@@ -5,6 +5,7 @@
 #include "CombatAttributeSet.h"
 #include "Components/StaticMeshComponent.h"
 #include "DrawDebugHelpers.h"
+#include "HitReactionComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -42,6 +43,15 @@ void UWeaponComponent::BeginPlay()
 	{
 		ASC->GiveAbility(FGameplayAbilitySpec(AttackAbilityClass));
 	}
+}
+
+void UWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (GetWorld()->GetTimerManager().IsTimerActive(HitStopTimer))
+	{
+		EndHitStop();
+	}
+	Super::EndPlay(EndPlayReason);
 }
 
 void UWeaponComponent::AttackPressed()
@@ -284,4 +294,31 @@ void UWeaponComponent::ApplyHit(AActor* Target)
 	{
 		UCombatAttributeSet::ApplyDamage(TargetASC, 0.f, CurrentAttack->PoiseDamage);
 	}
+
+	if (UHitReactionComponent* HitReaction = Target->FindComponentByClass<UHitReactionComponent>())
+	{
+		const FVector Direction = (Target->GetActorLocation() - GetOwner()->GetActorLocation()).GetSafeNormal2D();
+		HitReaction->ApplyKnockback(Direction * CurrentAttack->Knockback);
+	}
+
+	StartHitStop(CurrentAttack->HitStop);
+}
+
+void UWeaponComponent::StartHitStop(float Duration)
+{
+	if (Duration <= 0.f)
+	{
+		return;
+	}
+
+	// Timers run in dilated game time, so the real-time duration is scaled down by the dilation.
+	constexpr float Dilation = 0.05f;
+	UGameplayStatics::SetGlobalTimeDilation(this, Dilation);
+	GetWorld()->GetTimerManager().SetTimer(HitStopTimer, this, &UWeaponComponent::EndHitStop, Duration * Dilation);
+}
+
+void UWeaponComponent::EndHitStop()
+{
+	GetWorld()->GetTimerManager().ClearTimer(HitStopTimer);
+	UGameplayStatics::SetGlobalTimeDilation(this, 1.f);
 }

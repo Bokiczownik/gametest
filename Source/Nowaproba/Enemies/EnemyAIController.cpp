@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "TimerManager.h"
+#include "../Combat/HitReactionComponent.h"
 #include "../Health/HealthComponent.h"
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
@@ -67,7 +68,7 @@ void AEnemyAIController::UpdateBehaviour()
 	}
 
 	UEnemyAttackComponent* Attack = Self->GetAttack();
-	if (Attack->IsAttacking())
+	if (Attack->IsAttacking() || Self->GetHitReaction()->IsStaggered())
 	{
 		return;
 	}

@@ -13,4 +13,7 @@ namespace CombatTags
 
 	/** Weapon attacks (cancelled by the dash). */
 	NOWAPROBA_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Attack);
+
+	/** Owner is staggered (poise broken): cannot attack or dash. */
+	NOWAPROBA_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Staggered);
 }
