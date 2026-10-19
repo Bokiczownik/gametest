@@ -7,4 +7,7 @@ namespace CombatTags
 {
 	/** Owner takes no damage / poise damage (dash i-frames). */
 	NOWAPROBA_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Invulnerable);
+
+	/** Granted by the dash cooldown effect. */
+	NOWAPROBA_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Dash);
 }
