@@ -106,6 +106,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Moveset", meta = (ClampMin = "0.05"))
 	float HeavyHoldTime = 0.35f;
 
+	/** After an attack ends, no new attack can start for this long (s). Chaining inside an attack (ChainTime) is not affected. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Moveset", meta = (ClampMin = "0"))
+	float AttackCooldown = 0.5f;
+
 	/** The light combo restarts if the next light attack comes later than this after the previous one ended (s). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Moveset", meta = (ClampMin = "0"))
 	float ComboResetTime = 0.6f;

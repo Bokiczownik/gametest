@@ -20,7 +20,7 @@ enum class EWeaponAttackType : uint8
 /**
  * Holds the player's weapon (UWeaponData): attaches its mesh to the owner's skeletal mesh, turns attack input into
  * attacks (tap = light combo, hold = heavy, while sprinting = sprint attack, in the air = jump attack), buffers input
- * pressed during an attack until its ChainTime, and sweeps the blade during the hit window (ticks only then).
+ * pressed during an attack until its ChainTime, ignores attacks during the weapon's AttackCooldown after one ends, and sweeps the blade during the hit window (ticks only then).
  * Each attack is performed by AttackAbilityClass (UWeaponAttackAbility) on the owner's ability system.
  * Hits use the engine damage system (UGameplayStatics::ApplyDamage, so UHealthComponent and loot breakables react)
  * and apply PoiseDamage to targets with combat attributes. Each actor is hit once per attack.

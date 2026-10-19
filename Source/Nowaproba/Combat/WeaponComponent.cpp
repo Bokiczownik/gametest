@@ -86,6 +86,10 @@ void UWeaponComponent::HandleHeavyHoldReached()
 
 void UWeaponComponent::RequestAttack(EWeaponAttackType Type)
 {
+	if (!bAttacking && GetWorld()->GetTimeSeconds() - LastAttackEndTime < WeaponData->AttackCooldown)
+	{
+		return;
+	}
 	if (bAttacking && !bCanChain)
 	{
 		BufferedAttack = Type;
