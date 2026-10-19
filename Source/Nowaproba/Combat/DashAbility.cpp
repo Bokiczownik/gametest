@@ -129,7 +129,9 @@ void UDashAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const 
 	}
 	CooldownEffect->DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(CooldownDuration));
 
-	ApplyGameplayEffectToOwner(Handle, ActorInfo, ActivationInfo, CooldownEffect, GetAbilityLevel(Handle, ActorInfo));
+	// Not ApplyGameplayEffectToOwner: it builds the spec from the effect's class (CDO), which would drop this runtime instance.
+	const FGameplayEffectSpecHandle Spec(new FGameplayEffectSpec(CooldownEffect, MakeEffectContext(Handle, ActorInfo), GetAbilityLevel(Handle, ActorInfo)));
+	ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, Spec);
 }
 
 FVector UDashAbility::GetDashDirection(const FGameplayAbilityActorInfo* ActorInfo) const
