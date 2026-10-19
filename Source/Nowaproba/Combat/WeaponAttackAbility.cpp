@@ -4,6 +4,7 @@
 #include "Abilities/Tasks/AbilityTask_ApplyRootMotionConstantForce.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Animation/AnimMontage.h"
+#include "CombatAim.h"
 #include "CombatAttributeSet.h"
 #include "CombatTags.h"
 #include "GameFramework/Character.h"
@@ -129,16 +130,7 @@ FVector UWeaponAttackAbility::FaceCursor(ACharacter* Character, float YawOffset)
 {
 	FVector Direction = Character->GetActorForwardVector().RotateAngleAxis(-YawOffset, FVector::UpVector).GetSafeNormal2D();
 
-	const APlayerController* PC = Cast<APlayerController>(Character->GetController());
-	FHitResult Hit;
-	if (PC && PC->GetHitResultUnderCursor(ECC_Visibility, false, Hit))
-	{
-		const FVector ToCursor = (Hit.ImpactPoint - Character->GetActorLocation()).GetSafeNormal2D();
-		if (!ToCursor.IsNearlyZero())
-		{
-			Direction = ToCursor;
-		}
-	}
+	CombatAim::GetCursorDirection(Cast<APlayerController>(Character->GetController()), Character->GetActorLocation(), Direction);
 
 	Character->SetActorRotation(FRotator(0.f, Direction.Rotation().Yaw + YawOffset, 0.f));
 	return Direction;

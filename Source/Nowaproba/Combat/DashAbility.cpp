@@ -2,6 +2,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_ApplyRootMotionConstantForce.h"
+#include "CombatAim.h"
 #include "CombatAttributeSet.h"
 #include "CombatTags.h"
 #include "Components/CapsuleComponent.h"
@@ -142,12 +143,7 @@ FVector UDashAbility::GetDashDirection(const FGameplayAbilityActorInfo* ActorInf
 	FVector Direction = Character->GetLastMovementInputVector().GetSafeNormal2D();
 	if (Direction.IsNearlyZero())
 	{
-		FHitResult Hit;
-		const APlayerController* PC = Cast<APlayerController>(Character->GetController());
-		if (PC && PC->GetHitResultUnderCursor(ECC_Visibility, false, Hit))
-		{
-			Direction = (Hit.ImpactPoint - Character->GetActorLocation()).GetSafeNormal2D();
-		}
+		CombatAim::GetCursorDirection(Cast<APlayerController>(Character->GetController()), Character->GetActorLocation(), Direction);
 	}
 	return Direction.IsNearlyZero() ? Character->GetActorForwardVector().GetSafeNormal2D() : Direction;
 }
