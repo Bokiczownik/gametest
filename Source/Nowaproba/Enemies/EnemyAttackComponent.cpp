@@ -22,7 +22,9 @@ namespace
 
 UEnemyAttackComponent::UEnemyAttackComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	// Ticks only during a tracked windup.
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
 
 	// Quick jab and a slow, wide heavy blow with a long recovery to punish.
 	FEnemyAttack& Quick = Attacks.AddDefaulted_GetRef();
@@ -114,11 +116,9 @@ void UEnemyAttackComponent::StartAttack(AActor* Target)
 	bAttacking = true;
 	CurrentTarget = Target;
 
-	// Commit to a direction: the hit area stays where it was telegraphed.
-	if (!ToTarget.IsNearlyZero())
-	{
-		Owner->SetActorRotation(ToTarget.Rotation());
-	}
+	// Face the target; without tracking this commits the hit area to where it was telegraphed.
+	FaceTarget(180.f);
+	SetComponentTickEnabled(bTrackTarget);
 
 	if (Telegraph)
 	{
@@ -141,8 +141,34 @@ void UEnemyAttackComponent::StartAttack(AActor* Target)
 	Owner->GetWorldTimerManager().SetTimer(AttackTimer, this, &UEnemyAttackComponent::Strike, Attack.WindupTime, false);
 }
 
+void UEnemyAttackComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	FaceTarget(TrackTurnRate * DeltaTime);
+}
+
+void UEnemyAttackComponent::FaceTarget(float MaxYawDelta)
+{
+	AActor* Owner = GetOwner();
+	const AActor* Target = CurrentTarget.Get();
+	if (!Owner || !Target)
+	{
+		return;
+	}
+	FVector ToTarget = Target->GetActorLocation() - Owner->GetActorLocation();
+	ToTarget.Z = 0.f;
+	if (ToTarget.IsNearlyZero())
+	{
+		return;
+	}
+	FRotator Rotation = Owner->GetActorRotation();
+	Rotation.Yaw = FMath::FixedTurn(Rotation.Yaw, ToTarget.Rotation().Yaw, MaxYawDelta);
+	Owner->SetActorRotation(Rotation);
+}
+
 void UEnemyAttackComponent::CancelAttack()
 {
+	SetComponentTickEnabled(false);
 	if (AActor* Owner = GetOwner())
 	{
 		Owner->GetWorldTimerManager().ClearTimer(AttackTimer);
@@ -167,6 +193,7 @@ void UEnemyAttackComponent::Strike()
 {
 	AActor* Owner = GetOwner();
 	SetTelegraphVisible(false);
+	SetComponentTickEnabled(false);
 
 	AActor* Target = CurrentTarget.Get();
 	if (Owner && Target && Attacks.IsValidIndex(CurrentAttackIndex))

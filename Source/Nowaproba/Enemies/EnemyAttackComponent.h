@@ -59,8 +59,9 @@ struct FEnemyAttack
  * the owner to the target, plays its animation and shows the telegraph (hit area on the ground, sized to the attack)
  * for WindupTime; the strike then hits the target if it is still inside the sphere of Radius at Reach in front of the
  * owner: engine damage (UGameplayStatics::ApplyDamage), PoiseDamage (UCombatAttributeSet) and knockback
- * (UHitReactionComponent); then the owner recovers for RecoveryTime. No tick; timers only. The telegraph is scaled to
- * Radius (engine Cylinder: 100 cm wide at scale 1).
+ * (UHitReactionComponent); then the owner recovers for RecoveryTime. Timers drive the attack; with bTrackTarget the
+ * component ticks during the windup only, turning the owner (and the telegraph) toward the target at TrackTurnRate.
+ * The telegraph is scaled to Radius (engine Cylinder: 100 cm wide at scale 1).
  */
 UCLASS(ClassGroup = (Gameplay), meta = (BlueprintSpawnableComponent))
 class NOWAPROBA_API UEnemyAttackComponent : public UActorComponent
@@ -89,11 +90,21 @@ public:
 	/** Shown during the windup; positioned and scaled per attack. */
 	void SetTelegraph(UPrimitiveComponent* InTelegraph);
 
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Attack")
 	TArray<FEnemyAttack> Attacks;
+
+	/** Keep turning toward the target during the windup (the owner stays in place); off = the facing is committed at the start. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Attack")
+	bool bTrackTarget = false;
+
+	/** Yaw speed while tracking (deg/s); a target circling faster than this can still get out of the hit area. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Attack", meta = (ClampMin = "0", EditCondition = "bTrackTarget"))
+	float TrackTurnRate = 360.f;
 
 	/** Telegraph height above the owner's feet (avoids z-fighting with the ground). */
 	UPROPERTY(EditAnywhere, Category = "Enemy Attack")
@@ -113,4 +124,5 @@ private:
 	void FinishAttack();
 	void SetTelegraphVisible(bool bVisible);
 	void StopAttackAnimation();
+	void FaceTarget(float MaxYawDelta);
 };

@@ -74,7 +74,8 @@ void AEnemyAIController::UpdateBehaviour()
 	}
 
 	const bool bHunter = Self->Behaviour == EEnemyBehaviour::FogHunter;
-	const float Distance = FVector::Dist(Self->GetActorLocation(), Player->GetActorLocation());
+	// 2D like the attack's own range and hit tests: capsule centres of differently sized pawns sit at different heights.
+	const float Distance = FVector::Dist2D(Self->GetActorLocation(), Player->GetActorLocation());
 	if (!bChasing)
 	{
 		if ((bHunter || bAlerted || CanSee(Player)) && CanEngage(Player))

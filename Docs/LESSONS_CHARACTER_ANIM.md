@@ -68,6 +68,8 @@ Pliki: `Tools/Blender/skeleton_export.py`, `SourceArt/Characters/Skeleton/`, `/G
   nadpisuje instancji: trzeba ustawić instancję albo postawić aktora od nowa.
 
 ### 8. Pułapki MCP i edytora
+- ABP utworzony przez MCP nie ma TargetSkeleton: działa do restartu edytora, potem się nie kompiluje. Od razu poproś użytkownika o ustawienie szkieletu w ABP.
+- Niski przeciwnik: odległości w AI liczone w 3D nie zgadzały się z zasięgiem ataku liczonym w 2D (środki kapsuł na różnej wysokości). Teraz wszystko jest w 2D.
 - Crash edytora zniszczył niezapisany mesh, bo zmieniałem nazwy zasobów przed zapisem mesha. Po każdym
   imporcie od razu `save_assets`.
 - ABP przez MCP:
