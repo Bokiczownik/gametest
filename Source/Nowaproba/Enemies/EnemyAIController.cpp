@@ -165,6 +165,7 @@ void AEnemyAIController::SetChasing(bool bNewChasing)
 	if (AEnemyCharacter* Self = Enemy.Get())
 	{
 		Self->SetChaseSpeed(bChasing || Self->Behaviour == EEnemyBehaviour::Chase);
+		Self->SetInCombat(bChasing);
 	}
 }
 
@@ -228,4 +229,8 @@ void AEnemyAIController::StopChase()
 		StopMovement();
 	}
 	bChasing = false;
+	if (AEnemyCharacter* Self = Enemy.Get())
+	{
+		Self->SetInCombat(false);
+	}
 }

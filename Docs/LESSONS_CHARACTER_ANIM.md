@@ -53,6 +53,9 @@ Pliki: `Tools/Blender/skeleton_export.py`, `SourceArt/Characters/Skeleton/`, `/G
   (Sword_IdleReady, Sword_RunReady). Atak zaczyna się i kończy w tej pozie.
 - **Na przyszłość:** pierwsza i ostatnia klatka każdego montażu muszą pasować do pozy lokomocji, z której
   i do której on blenduje.
+- **Później (2026-10-21):** miecz w górze tylko w walce. `AEnemyCharacter.bInCombat` (ustawia AI przy pościgu)
+  -> `CombatAlpha` w ABP blenduje zwykłe Idle/Run z pozami Ready. Atak startuje tylko w pościgu, więc nadal
+  zaczyna się z pozy gotowości. Nowe UPROPERTY w C++ wymaga zamknięcia edytora i pełnego buildu (Live Coding nie).
 
 ### 6. Skala postaci
 - **Pomyłka:** dobrałem skalę 1,35 pod kapsułę gracza (1,8 m), a szkielet miał być niższy od gracza.

@@ -59,6 +59,9 @@ public:
 	/** Uses ChaseSpeed while chasing, else PatrolWalkSpeed. */
 	void SetChaseSpeed(bool bChasing);
 
+	/** Set by AEnemyAIController while it chases or attacks the player (anim BP raises the weapon). */
+	void SetInCombat(bool bNewInCombat) { bInCombat = bNewInCombat; }
+
 	/** Fog hunter chase: ChaseSpeed within HunterNearDistance of the player, HunterFarSpeed farther away. */
 	void UpdateHunterChaseSpeed(float DistanceToPlayer);
 
@@ -100,6 +103,10 @@ public:
 	/** Guard fights only while the player is within this distance of its post. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Guard", meta = (ClampMin = "0", EditCondition = "Behaviour == EEnemyBehaviour::Guard"))
 	float GuardRadius = 800.f;
+
+	/** True while the AI chases or attacks the player. */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Enemy")
+	bool bInCombat = false;
 
 protected:
 	virtual void BeginPlay() override;
