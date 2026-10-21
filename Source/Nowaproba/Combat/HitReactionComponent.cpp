@@ -8,6 +8,7 @@
 #include "CombatTags.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "TimerManager.h"
 #include "../Health/HealthComponent.h"
@@ -49,7 +50,16 @@ void UHitReactionComponent::ApplyKnockback(const FVector& Velocity)
 	{
 		return;
 	}
-	Character->LaunchCharacter(FVector(Velocity.X, Velocity.Y, 0.f) * KnockbackScale, true, false);
+	const FVector Push = FVector(Velocity.X, Velocity.Y, 0.f) * KnockbackScale;
+	UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
+	if (bGroundedKnockback && Movement->IsMovingOnGround())
+	{
+		Movement->AddImpulse(Push, true);
+	}
+	else
+	{
+		Character->LaunchCharacter(Push, true, false);
+	}
 }
 
 void UHitReactionComponent::HandleHealthChanged(float CurrentHealth, float MaxHealth)

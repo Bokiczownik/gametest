@@ -26,7 +26,7 @@ class NOWAPROBA_API UHitReactionComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-	/** Launches the owner (character) horizontally by Velocity * KnockbackScale. Ignored when dead. */
+	/** Pushes the owner (character) horizontally by Velocity * KnockbackScale (launch, or a walking impulse with bGroundedKnockback). Ignored when dead. */
 	UFUNCTION(BlueprintCallable, Category = "Hit Reaction")
 	void ApplyKnockback(const FVector& Velocity);
 
@@ -50,6 +50,10 @@ protected:
 	/** Multiplier on incoming knockback (0 = immovable, e.g. bosses). */
 	UPROPERTY(EditAnywhere, Category = "Hit Reaction|Knockback", meta = (ClampMin = "0"))
 	float KnockbackScale = 1.f;
+
+	/** Knockback as an impulse that keeps the owner walking (input and ground attacks keep working) instead of a launch into falling. */
+	UPROPERTY(EditAnywhere, Category = "Hit Reaction|Knockback")
+	bool bGroundedKnockback = false;
 
 	/** Played on DefaultSlot when staggered (optional). */
 	UPROPERTY(EditAnywhere, Category = "Hit Reaction|Stagger")
