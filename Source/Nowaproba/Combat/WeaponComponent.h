@@ -64,6 +64,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<UGameplayAbility> AttackAbilityClass;
 
+	/** The hit area reaches this far below the blade (cm), so the swing also hits short enemies in the top-down view. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (ClampMin = "0"))
+	float HitReachDown = 80.f;
+
 	/** Draws the blade sweeps (green) and hits (red). */
 	UPROPERTY(EditAnywhere, Category = "Weapon|Debug")
 	bool bDrawDebugHits = false;

@@ -253,18 +253,21 @@ void UWeaponComponent::SweepBlade()
 	ObjectParams.AddObjectTypesToQuery(ECC_PhysicsBody);
 	ObjectParams.AddObjectTypesToQuery(ECC_Destructible);
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(WeaponSweep), false, GetOwner());
-	const FCollisionShape Sphere = FCollisionShape::MakeSphere(WeaponData->HitRadius);
+	// Upright capsule from HitRadius above the blade to HitReachDown + HitRadius below it.
+	const FCollisionShape Shape = FCollisionShape::MakeCapsule(WeaponData->HitRadius, WeaponData->HitRadius + HitReachDown * 0.5f);
+	const FVector Down(0.f, 0.f, -HitReachDown * 0.5f);
 
 	// Along the blade, and along the path of the tip since the last frame (fast swings).
 	TArray<FHitResult> Hits;
 	TArray<FHitResult> TipHits;
-	GetWorld()->SweepMultiByObjectType(Hits, BladeStart, Tip, FQuat::Identity, ObjectParams, Sphere, QueryParams);
-	GetWorld()->SweepMultiByObjectType(TipHits, PreviousTip, Tip, FQuat::Identity, ObjectParams, Sphere, QueryParams);
+	GetWorld()->SweepMultiByObjectType(Hits, BladeStart + Down, Tip + Down, FQuat::Identity, ObjectParams, Shape, QueryParams);
+	GetWorld()->SweepMultiByObjectType(TipHits, PreviousTip + Down, Tip + Down, FQuat::Identity, ObjectParams, Shape, QueryParams);
 	Hits.Append(TipHits);
 
 	if (bDrawDebugHits)
 	{
 		DrawDebugLine(GetWorld(), BladeStart, Tip, FColor::Green, false, 1.f, 0, 2.f);
+		DrawDebugLine(GetWorld(), BladeStart + Down * 2.f, Tip + Down * 2.f, FColor::Green, false, 1.f, 0, 2.f);
 		DrawDebugLine(GetWorld(), PreviousTip, Tip, FColor::Green, false, 1.f, 0, 2.f);
 	}
 	PreviousTip = Tip;

@@ -11,7 +11,7 @@
 
 namespace
 {
-	const FVector2D BarSize(50.f, 4.f);
+	const FVector2D EnemyBarSize(50.f, 4.f);
 }
 
 void UEnemyHealthBarWidget::NativeOnInitialized()
@@ -33,8 +33,8 @@ void UEnemyHealthBarWidget::BuildLayout()
 	auto AddBar = [this, Root](const TCHAR* Name, const FLinearColor& Fill) -> UProgressBar*
 	{
 		USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
-		Size->SetWidthOverride(BarSize.X);
-		Size->SetHeightOverride(BarSize.Y);
+		Size->SetWidthOverride(EnemyBarSize.X);
+		Size->SetHeightOverride(EnemyBarSize.Y);
 		UProgressBar* Bar = WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), Name);
 		Bar->SetFillColorAndOpacity(Fill);
 		Size->SetContent(Bar);
