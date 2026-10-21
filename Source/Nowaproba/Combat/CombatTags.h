@@ -16,4 +16,7 @@ namespace CombatTags
 
 	/** Owner is staggered (poise broken): cannot attack or dash. */
 	NOWAPROBA_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Staggered);
+
+	/** Stagger cooldown: owner takes no poise damage and no knockback. */
+	NOWAPROBA_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_StaggerImmune);
 }

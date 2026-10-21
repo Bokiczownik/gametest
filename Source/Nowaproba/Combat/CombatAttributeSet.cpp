@@ -100,7 +100,7 @@ void UCombatAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 	{
 		const float Amount = GetPoiseDamage();
 		SetPoiseDamage(0.f);
-		if (Amount > 0.f && !bInvulnerable)
+		if (Amount > 0.f && !bInvulnerable && !Data.Target.HasMatchingGameplayTag(CombatTags::State_StaggerImmune))
 		{
 			SetPoise(FMath::Clamp(GetPoise() - Amount, 0.f, GetMaxPoise()));
 		}

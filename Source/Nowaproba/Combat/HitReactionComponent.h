@@ -18,7 +18,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStaggered);
  * Staggered = tag State.Staggered (blocks attack / dash abilities), running Ability.Attack abilities are cancelled,
  * StaggerAnimation plays, a player cannot move and an AI stops moving, for StaggerDuration; OnStaggered lets the owner
  * cancel its own actions. Poise refills to MaxPoise after the stagger, or PoiseRegenDelay after the last poise damage.
- * For StaggerCooldown after a stagger ends the owner cannot be staggered again.
+ * For StaggerCooldown after a stagger ends the owner has tag State.StaggerImmune: no poise damage and no knockback.
  */
 UCLASS(ClassGroup = (Gameplay), meta = (BlueprintSpawnableComponent))
 class NOWAPROBA_API UHitReactionComponent : public UActorComponent
@@ -58,7 +58,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Hit Reaction|Stagger", meta = (ClampMin = "0.1"))
 	float StaggerDuration = 1.2f;
 
-	/** After a stagger ends, poise damage cannot stagger again for this long (s); poise emptied meanwhile refills at its end. */
+	/** After a stagger ends, the owner ignores poise damage and knockback for this long (s). */
 	UPROPERTY(EditAnywhere, Category = "Hit Reaction|Stagger", meta = (ClampMin = "0"))
 	float StaggerCooldown = 0.f;
 
