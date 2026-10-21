@@ -32,7 +32,9 @@ Pliki: `Tools/Blender/skeleton_export.py`, `SourceArt/Characters/Skeleton/`, `/G
 - **Objaw:** miecz odstawał od dłoni. Import pokazywał ostrzeżenie „brakuje kości Weapon_Dagger w pozie
   powiązania”.
 - **Rozwiązanie:** przy eksporcie kopia broni dołączana do mesha ciała z grupą wierzchołków kości dłoni
-  (waga 1). Druga opcja to osobny static mesh na sockecie.
+  (waga 1). Static mesh na sockecie w UE tu nie działa: w animacjach kości mają skalę ~100 (w pozie spoczynkowej
+  nie), więc tarcza na sockecie LowerArm_L wychodziła 100x za duża. Tarczę dołączyłem tak samo jak miecz
+  (wariant SK_SkeletonShield w `skeleton_export.py`).
 - **Inny błąd przy okazji:** relacja broń–kość z oryginału miała przesunięcie 0,46 m. Broń przypiąłem od nowa,
   licząc macierz z pozycji dłoni (środek rękojeści = origin broni, ostrze = lokalne -Z).
 

@@ -10,7 +10,8 @@ Why the extra steps:
 - Quaternius actions only key some bones; the rest must take the glTF default pose (read from the .glb with its
   animations stripped), otherwise they bake whatever pose was left in the scene.
 - The weapon is bone-parented in the .blend; UE turns that into a bone with a broken bind pose, so the export
-  joins a copy of it into the body mesh, fully weighted to its parent bone.
+  joins a copy of it into the body mesh, fully weighted to its parent bone. The same goes for the shield
+  (bone-parented to LowerArm.L), which only goes into the SK_SkeletonShield variant.
 """
 import json
 import os
@@ -20,10 +21,13 @@ import bpy
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GLB = os.path.join(ROOT, "SourceArt", "Downloaded", "Skeleton by Quaternius - yq5ATpujSt.glb")
-OUT = os.path.join(ROOT, "SourceArt", "Characters", "Skeleton", "Export", "SK_Skeleton.fbx")
+EXPORT_DIR = os.path.join(ROOT, "SourceArt", "Characters", "Skeleton", "Export")
 SRC_ARM = "CharacterArmature"
 SRC_MESH = "Skeleton"
 WEAPON = "Weapon_Dagger"
+SHIELD = "Shield"
+# (output file, bone-parented props joined into the body mesh)
+VARIANTS = [("SK_Skeleton.fbx", [WEAPON]), ("SK_SkeletonShield.fbx", [WEAPON, SHIELD])]
 TMP_SCENE = "SKELETON_EXPORT_TMP"
 
 
@@ -87,27 +91,8 @@ def bake(arm, act, default_pose, scene):
     return frames
 
 
-def main():
-    scene = bpy.context.window.scene
-    src_arm = bpy.data.objects[SRC_ARM]
-    src_mesh = bpy.data.objects[SRC_MESH]
-    weapon = bpy.data.objects[WEAPON]
-    saved_action = src_arm.animation_data.action
-    saved_frame = scene.frame_current
-    unit = src_arm.matrix_world.to_scale()[0]
-
-    default_pose = read_default_pose(src_arm)
-    baked = [(name, bake(src_arm, act, default_pose, scene)) for name, act in export_actions(src_arm)]
-
-    # Weapon in world space at rest, so it can be joined into the mesh.
-    src_arm.data.pose_position = "REST"
-    bpy.context.view_layer.update()
-    weapon_world = weapon.matrix_world.copy()
-    weapon_bone = weapon.parent_bone
-    src_arm.data.pose_position = "POSE"
-    src_arm.animation_data.action = saved_action
-    scene.frame_set(saved_frame)
-
+def export_variant(src_arm, src_mesh, props, baked, unit, out):
+    """Exports the rig with copies of the given props joined into the body mesh (props: name -> (world matrix at rest, bone))."""
     tmp = bpy.data.scenes.new(TMP_SCENE)
     bpy.context.window.scene = tmp
     arm = src_arm.copy()
@@ -123,21 +108,25 @@ def main():
     mesh.parent = None
     tmp.collection.objects.link(mesh)
     mesh.matrix_world = src_mesh.matrix_world.copy()
-    blade = weapon.copy()
-    blade.data = weapon.data.copy()
-    blade.parent = None
-    tmp.collection.objects.link(blade)
-    blade.matrix_world = weapon_world
-    blade.data.transform(mesh.matrix_world.inverted() @ blade.matrix_world)
-    blade.matrix_world = mesh.matrix_world.copy()
-    blade.vertex_groups.new(name=weapon_bone).add(list(range(len(blade.data.vertices))), 1.0, "REPLACE")
+    parts = []
+    for prop, (prop_world, prop_bone) in props.items():
+        part = bpy.data.objects[prop].copy()
+        part.data = part.data.copy()
+        part.parent = None
+        tmp.collection.objects.link(part)
+        part.data.transform(mesh.matrix_world.inverted() @ prop_world)
+        part.matrix_world = mesh.matrix_world.copy()
+        part.vertex_groups.clear()
+        part.vertex_groups.new(name=prop_bone).add(list(range(len(part.data.vertices))), 1.0, "REPLACE")
+        parts.append(part)
     for mod in mesh.modifiers:
         if mod.type == "ARMATURE":
             mod.object = arm
 
     bpy.ops.object.select_all(action="DESELECT")
     mesh.select_set(True)
-    blade.select_set(True)
+    for part in parts:
+        part.select_set(True)
     bpy.context.view_layer.objects.active = mesh
     bpy.ops.object.join()
     mesh.name = SRC_MESH
@@ -169,12 +158,11 @@ def main():
         track.strips.new(name, min(frames), act)
 
     bpy.ops.export_scene.fbx(
-        filepath=OUT, use_selection=True, object_types={"ARMATURE", "MESH"}, add_leaf_bones=False,
+        filepath=out, use_selection=True, object_types={"ARMATURE", "MESH"}, add_leaf_bones=False,
         bake_anim=True, bake_anim_use_all_actions=False, bake_anim_use_nla_strips=True,
         bake_anim_force_startend_keying=True, bake_anim_simplify_factor=0.0, apply_unit_scale=True,
         mesh_smooth_type="FACE")
 
-    bpy.context.window.scene = scene
     for act in new_actions:
         bpy.data.actions.remove(act)
     arm_data, mesh_data = arm.data, mesh.data
@@ -183,7 +171,32 @@ def main():
     bpy.data.meshes.remove(mesh_data)
     bpy.data.armatures.remove(arm_data)
     bpy.data.scenes.remove(tmp)
-    print(f"exported {len(baked)} actions to {OUT}")
+
+
+def main():
+    scene = bpy.context.window.scene
+    src_arm = bpy.data.objects[SRC_ARM]
+    src_mesh = bpy.data.objects[SRC_MESH]
+    saved_action = src_arm.animation_data.action
+    saved_frame = scene.frame_current
+    unit = src_arm.matrix_world.to_scale()[0]
+
+    default_pose = read_default_pose(src_arm)
+    baked = [(name, bake(src_arm, act, default_pose, scene)) for name, act in export_actions(src_arm)]
+
+    # Props in world space at rest, so they can be joined into the mesh.
+    src_arm.data.pose_position = "REST"
+    bpy.context.view_layer.update()
+    props_rest = {name: (bpy.data.objects[name].matrix_world.copy(), bpy.data.objects[name].parent_bone) for name in (WEAPON, SHIELD)}
+    src_arm.data.pose_position = "POSE"
+    src_arm.animation_data.action = saved_action
+    scene.frame_set(saved_frame)
+
+    for file_name, prop_names in VARIANTS:
+        out = os.path.join(EXPORT_DIR, file_name)
+        export_variant(src_arm, src_mesh, {name: props_rest[name] for name in prop_names}, baked, unit, out)
+        print(f"exported {len(baked)} actions to {out}")
+    bpy.context.window.scene = scene
 
 
 if __name__ == "__main__":

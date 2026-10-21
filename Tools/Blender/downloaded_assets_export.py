@@ -13,6 +13,7 @@ kit uses one name for different colours), so Unreal creates one material per dis
 
 Scales: the Quaternius village kit has 0.269 m door leaves, KIT_SCALE 8.5 makes them ~2.29 m
 (player capsule is 1.92 m). The CreativeTrio cottage door leaf is 0.096 m, scale 24 -> ~2.3 m.
+The Quaternius heater shield imports 2.56 m tall; 0.2 sizes it for the 1.35 m skeleton rig (held on its forearm).
 """
 
 import os
@@ -48,6 +49,7 @@ ASSETS = [
     ("oYtDty0fR6", "SM_PineTrees", KIT_SCALE, "Village", None),
     ("ZuRHRsKWoz", "SM_PathStraight", KIT_SCALE, "Village", None),
     ("8wDmuvrSya", "SM_RockPathSquareWide", 1.0, "RockPath", None),
+    ("srN1KGAO7f", "SM_Shield", 0.2, "Shield", None),
 ]
 
 
