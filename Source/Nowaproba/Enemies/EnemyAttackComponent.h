@@ -83,6 +83,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
 	bool IsAttacking() const { return bAttacking; }
 
+	/** True while the owner must stay in place: windup and strike, and the recovery unless bMoveDuringRecovery. */
+	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
+	bool IsHoldingPosition() const { return bAttacking && !(bRecovering && bMoveDuringRecovery); }
+
 	/** Distance from the owner within which some attack can hit (largest Reach + Radius). */
 	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
 	float GetAttackRange() const;
@@ -106,6 +110,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Attack", meta = (ClampMin = "0", EditCondition = "bTrackTarget"))
 	float TrackTurnRate = 360.f;
 
+	/** Let the owner move (keep chasing) during RecoveryTime; it still cannot start the next attack until it ends. Off = it stands still (punish window). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Attack")
+	bool bMoveDuringRecovery = false;
+
 	/** Telegraph height above the owner's feet (avoids z-fighting with the ground). */
 	UPROPERTY(EditAnywhere, Category = "Enemy Attack")
 	float TelegraphGroundOffset = 2.f;
@@ -118,6 +126,7 @@ private:
 	int32 CurrentAttackIndex = INDEX_NONE;
 	FTimerHandle AttackTimer;
 	bool bAttacking = false;
+	bool bRecovering = false;
 
 	int32 PickAttack(float Distance) const;
 	void Strike();

@@ -181,6 +181,7 @@ void UEnemyAttackComponent::CancelAttack()
 	CurrentTarget.Reset();
 	CurrentAttackIndex = INDEX_NONE;
 	bAttacking = false;
+	bRecovering = false;
 }
 
 void UEnemyAttackComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -224,6 +225,7 @@ void UEnemyAttackComponent::Strike()
 			}
 		}
 
+		bRecovering = true;
 		Owner->GetWorldTimerManager().SetTimer(AttackTimer, this, &UEnemyAttackComponent::FinishAttack, FMath::Max(Attack.RecoveryTime, KINDA_SMALL_NUMBER), false);
 		return;
 	}
@@ -236,6 +238,7 @@ void UEnemyAttackComponent::FinishAttack()
 	CurrentTarget.Reset();
 	CurrentAttackIndex = INDEX_NONE;
 	bAttacking = false;
+	bRecovering = false;
 }
 
 void UEnemyAttackComponent::SetTelegraphVisible(bool bVisible)

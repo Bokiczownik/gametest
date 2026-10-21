@@ -68,7 +68,7 @@ void AEnemyAIController::UpdateBehaviour()
 	}
 
 	UEnemyAttackComponent* Attack = Self->GetAttack();
-	if (Attack->IsAttacking() || Self->GetHitReaction()->IsStaggered())
+	if (Attack->IsHoldingPosition() || Self->GetHitReaction()->IsStaggered())
 	{
 		return;
 	}
