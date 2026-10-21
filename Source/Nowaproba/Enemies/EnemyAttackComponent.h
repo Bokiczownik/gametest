@@ -13,6 +13,10 @@ struct FEnemyAttack
 {
 	GENERATED_BODY()
 
+	/** For StartNamedAttack (e.g. a counter after a block). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+	FName Name;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack", meta = (ClampMin = "0"))
 	float Damage = 15.f;
 
@@ -39,7 +43,11 @@ struct FEnemyAttack
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack", meta = (ClampMin = "0"))
 	float RecoveryTime = 1.f;
 
-	/** Relative chance among the attacks that can reach the target. */
+	/** Stuns the target on hit for this long (s, UHitReactionComponent::ApplyStun); 0 = no stun. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack", meta = (ClampMin = "0"))
+	float StunDuration = 0.f;
+
+	/** Relative chance among the attacks that can reach the target; 0 = only started by name, not counted in the attack range. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack", meta = (ClampMin = "0"))
 	float Weight = 1.f;
 
@@ -50,6 +58,10 @@ struct FEnemyAttack
 	/** Animation time of the hit frame (s). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Animation", meta = (ClampMin = "0"))
 	float StrikeAnimTime = 0.f;
+
+	/** The animation drives the whole body (the anim BP drops its arm layers, e.g. the shield arm). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Animation")
+	bool bFullBody = false;
 
 	float GetRange() const { return Reach + Radius; }
 };
@@ -75,6 +87,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Enemy Attack")
 	void StartAttack(AActor* Target);
 
+	/** Starts the attack called Name regardless of range or Weight (it may miss). Ignored while an attack is running. */
+	UFUNCTION(BlueprintCallable, Category = "Enemy Attack")
+	void StartNamedAttack(AActor* Target, FName Name);
+
 	/** Stops the current attack without hitting (e.g. on death or stagger). */
 	UFUNCTION(BlueprintCallable, Category = "Enemy Attack")
 	void CancelAttack();
@@ -83,11 +99,19 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
 	bool IsAttacking() const { return bAttacking; }
 
+	/** True from StartAttack until the strike (telegraph shown). */
+	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
+	bool IsWindingUp() const { return bAttacking && !bRecovering; }
+
+	/** True while the running attack's animation is full body (FEnemyAttack::bFullBody). */
+	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
+	bool IsFullBodyAttack() const { return bAttacking && Attacks.IsValidIndex(CurrentAttackIndex) && Attacks[CurrentAttackIndex].bFullBody; }
+
 	/** True while the owner must stay in place: windup and strike, and the recovery unless bMoveDuringRecovery. */
 	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
 	bool IsHoldingPosition() const { return bAttacking && !(bRecovering && bMoveDuringRecovery); }
 
-	/** Distance from the owner within which some attack can hit (largest Reach + Radius). */
+	/** Distance from the owner within which some attack can hit (largest Reach + Radius of attacks with Weight > 0). */
 	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
 	float GetAttackRange() const;
 
@@ -129,6 +153,7 @@ private:
 	bool bRecovering = false;
 
 	int32 PickAttack(float Distance) const;
+	void BeginAttack(AActor* Target, int32 AttackIndex);
 	void Strike();
 	void FinishAttack();
 	void SetTelegraphVisible(bool bVisible);

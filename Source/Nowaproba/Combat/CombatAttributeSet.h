@@ -48,6 +48,16 @@ public:
 	FGameplayAttributeData MaxPoise = 50.f;
 	COMBAT_ATTRIBUTE_ACCESSORS(UCombatAttributeSet, MaxPoise)
 
+	/** Block points: absorb frontal damage while blocking, before Health (UBlockComponent fills it when a block starts). */
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Block")
+	FGameplayAttributeData Block = 0.f;
+	COMBAT_ATTRIBUTE_ACCESSORS(UCombatAttributeSet, Block)
+
+	/** 0 = the owner cannot block. */
+	UPROPERTY(BlueprintReadOnly, Category = "Combat|Block")
+	FGameplayAttributeData MaxBlock = 0.f;
+	COMBAT_ATTRIBUTE_ACCESSORS(UCombatAttributeSet, MaxBlock)
+
 	/** Meta: incoming health damage. */
 	UPROPERTY(BlueprintReadOnly, Category = "Combat|Meta")
 	FGameplayAttributeData Damage = 0.f;
@@ -60,9 +70,10 @@ public:
 
 	/**
 	 * Applies Damage / PoiseDamage to Target through an instant gameplay effect, so PostGameplayEffectExecute runs
-	 * (invulnerability, clamping). Use this instead of ApplyModToAttribute, which only sets base values.
+	 * (invulnerability, blocking, clamping). Use this instead of ApplyModToAttribute, which only sets base values.
+	 * Source (optional): where the hit comes from, so a block can tell front from back.
 	 */
-	static void ApplyDamage(UAbilitySystemComponent* Target, float InDamage, float InPoiseDamage);
+	static void ApplyDamage(UAbilitySystemComponent* Target, float InDamage, float InPoiseDamage, const AActor* Source = nullptr);
 
 	virtual void PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const override;
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
@@ -70,5 +81,8 @@ public:
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
 private:
+	/** True if the target blocks a hit from the effect's origin (front only). */
+	bool IsBlockedHit(const FGameplayEffectModCallbackData& Data) const;
+
 	void ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const;
 };

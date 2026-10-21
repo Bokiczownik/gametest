@@ -68,14 +68,14 @@ def read_default_pose(arm):
 
 
 def export_actions(arm):
-    """Original Quaternius clips (the armature's NLA tracks from the glTF import) plus our Sword_* and Shield_* actions
+    """Original Quaternius clips (the armature's NLA tracks from the glTF import) plus our Sword_*, Shield_* and KnockDown actions
     (Shield_Guard / Shield_Carry: left-arm poses layered over the shield skeleton's arm in ABP_Skeleton)."""
     acts = []
     for track in arm.animation_data.nla_tracks:
         for strip in track.strips:
             if strip.action:
                 acts.append((strip.action.name.split("|")[3], strip.action))
-    acts += [(act.name, act) for act in bpy.data.actions if act.name.startswith(("Sword_", "Shield_"))]
+    acts += [(act.name, act) for act in bpy.data.actions if act.name.startswith(("Sword_", "Shield_", "KnockDown"))]
     return acts
 
 

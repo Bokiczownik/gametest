@@ -26,6 +26,10 @@ public:
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	/** Temporary multiplier on PushSpeed (e.g. while blocking); 1 = normal. */
+	UFUNCTION(BlueprintCallable, Category = "Pushable")
+	void SetPushSpeedScale(float Scale) { PushSpeedScale = FMath::Max(0.f, Scale); }
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -38,6 +42,7 @@ private:
 	TObjectPtr<UCapsuleComponent> Capsule;
 
 	TArray<TWeakObjectPtr<APawn>> OverlappingPawns;
+	float PushSpeedScale = 1.f;
 
 	UFUNCTION()
 	void HandleBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);

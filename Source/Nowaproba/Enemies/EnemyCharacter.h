@@ -2,15 +2,18 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "../Combat/BlockComponent.h"
 #include "EnemyCharacter.generated.h"
 
 class AFogHunterSpawner;
+class UAnimSequenceBase;
 class UCombatAbilitySystemComponent;
 class UHitReactionComponent;
 class UDataTable;
 class UEnemyAttackComponent;
 class UHealthComponent;
 class UStaticMeshComponent;
+class UWidgetComponent;
 
 UENUM(BlueprintType)
 enum class EEnemyBehaviour : uint8
@@ -30,6 +33,10 @@ enum class EEnemyBehaviour : uint8
  * Detection/chase tuning lives here so each enemy BP can differ. On death: AI stops, the capsule stops blocking,
  * LootRow from LootTable is paid to the killer (UHealthComponent::GetLastDamageInstigator) and the corpse is removed
  * after CorpseLifetime. Mesh, anim BP and telegraph mesh/material are set in the BP child.
+ * Block (UBlockComponent, off while its MaxBlock is 0): taking damage from the player starts a block when it is ready
+ * and the enemy is not winding up an attack. A block that lasts its full duration is followed by the attack named
+ * BlockCounterAttack; a broken block knocks the enemy down (KnockdownAnimation, no attacks or moving, no stagger);
+ * a stagger interrupts it. HealthBar shows a small HP / block bar above the head.
  */
 UCLASS()
 class NOWAPROBA_API AEnemyCharacter : public ACharacter
@@ -41,9 +48,17 @@ public:
 
 	UHealthComponent* GetHealth() const { return Health; }
 	UEnemyAttackComponent* GetAttack() const { return Attack; }
+	UBlockComponent* GetBlock() const { return Block; }
 	UHitReactionComponent* GetHitReaction() const { return HitReaction; }
 
 	bool IsDead() const;
+
+	/** Blocking or knocked down: the AI neither moves nor attacks. */
+	bool IsActionLocked() const;
+
+	/** For the anim BP: a slot animation drives the whole body (block, knockdown, full-body attack), so arm layers are dropped. */
+	UFUNCTION(BlueprintPure, Category = "Enemy")
+	bool IsPlayingFullBodyAnimation() const;
 
 	/** Patrol points in world space (from PatrolPoints, fixed at BeginPlay). */
 	const TArray<FVector>& GetPatrolRoute() const { return PatrolRoute; }
@@ -125,6 +140,26 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
 	TObjectPtr<UEnemyAttackComponent> Attack;
 
+	/** Disabled unless MaxBlock > 0 (set in the BP). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
+	TObjectPtr<UBlockComponent> Block;
+
+	/** Small HP / block bar above the head (screen space). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
+	TObjectPtr<UWidgetComponent> HealthBar;
+
+	/** Height of the health bar above the top of the capsule (cm). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy", meta = (ClampMin = "0"))
+	float HealthBarOffset = 25.f;
+
+	/** Attack (FEnemyAttack::Name) started when a block lasts its full duration. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Block")
+	FName BlockCounterAttack = TEXT("ShieldBash");
+
+	/** Played on DefaultSlot when the block is broken; the enemy is down for its length. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Block")
+	TObjectPtr<UAnimSequenceBase> KnockdownAnimation;
+
 	/** Hit area shown during the attack windup (mesh/material in BP; hidden in game until an attack starts). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy")
 	TObjectPtr<UStaticMeshComponent> AttackTelegraph;
@@ -145,6 +180,18 @@ private:
 	FRotator HomeRotation = FRotator::ZeroRotator;
 	float ChaseSpeed = 0.f;
 	TWeakObjectPtr<AFogHunterSpawner> HunterSpawner;
+	float LastHealth = 0.f;
+	bool bKnockedDown = false;
+	FTimerHandle KnockdownTimer;
+
+	void StartKnockdown();
+	void EndKnockdown();
+
+	UFUNCTION()
+	void HandleHealthChanged(float CurrentHealth, float MaxHealth);
+
+	UFUNCTION()
+	void HandleBlockEnded(EBlockEndReason Reason);
 
 	UFUNCTION()
 	void HandleDeath();

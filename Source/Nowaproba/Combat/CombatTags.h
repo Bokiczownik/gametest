@@ -19,4 +19,10 @@ namespace CombatTags
 
 	/** Stagger cooldown: owner takes no poise damage and no knockback. */
 	NOWAPROBA_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_StaggerImmune);
+
+	/** Owner is blocking (UBlockComponent): frontal hits are reduced and go to the Block attribute first. */
+	NOWAPROBA_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Blocking);
+
+	/** Owner is stunned: cannot move, attack or dash. */
+	NOWAPROBA_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Stunned);
 }

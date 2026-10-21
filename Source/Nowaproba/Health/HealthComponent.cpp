@@ -37,6 +37,11 @@ void UHealthComponent::BeginPlay()
 
 void UHealthComponent::ApplyHealthDamage(float Amount)
 {
+	ApplyDamageFrom(Amount, nullptr);
+}
+
+void UHealthComponent::ApplyDamageFrom(float Amount, const AActor* Source)
+{
 	if (bDead || Amount <= 0.f)
 	{
 		return;
@@ -44,8 +49,8 @@ void UHealthComponent::ApplyHealthDamage(float Amount)
 
 	if (AbilitySystem)
 	{
-		// Goes through the Damage meta attribute (invulnerability); death is handled by HandleHealthAttributeChanged.
-		UCombatAttributeSet::ApplyDamage(AbilitySystem, Amount, 0.f);
+		// Goes through the Damage meta attribute (invulnerability, block); death is handled by HandleHealthAttributeChanged.
+		UCombatAttributeSet::ApplyDamage(AbilitySystem, Amount, 0.f, Source);
 		return;
 	}
 
@@ -94,7 +99,7 @@ void UHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage, c
 
 	APawn* InstigatorPawn = InstigatedBy ? InstigatedBy->GetPawn() : nullptr;
 	LastDamageInstigator = InstigatorPawn ? InstigatorPawn : Cast<APawn>(DamageCauser);
-	ApplyHealthDamage(Damage);
+	ApplyDamageFrom(Damage, DamageCauser);
 }
 
 void UHealthComponent::HandleHealthAttributeChanged(const FOnAttributeChangeData& Data)

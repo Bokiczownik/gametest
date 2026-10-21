@@ -1,16 +1,22 @@
 #include "EnemyCharacter.h"
 
 #include "AIController.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimSequenceBase.h"
 #include "../Combat/CombatAbilitySystemComponent.h"
+#include "../Combat/CombatTags.h"
 #include "../Combat/HitReactionComponent.h"
+#include "Components/WidgetComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EnemyAIController.h"
 #include "EnemyAttackComponent.h"
+#include "EnemyHealthBarWidget.h"
 #include "FogHunterSpawner.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "../Health/HealthComponent.h"
 #include "../Loot/LootLibrary.h"
+#include "TimerManager.h"
 
 AEnemyCharacter::AEnemyCharacter()
 {
@@ -29,6 +35,16 @@ AEnemyCharacter::AEnemyCharacter()
 	AbilitySystem = CreateDefaultSubobject<UCombatAbilitySystemComponent>(TEXT("AbilitySystem"));
 	Attack = CreateDefaultSubobject<UEnemyAttackComponent>(TEXT("Attack"));
 	HitReaction = CreateDefaultSubobject<UHitReactionComponent>(TEXT("HitReaction"));
+	Block = CreateDefaultSubobject<UBlockComponent>(TEXT("Block"));
+
+	HealthBar = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
+	HealthBar->SetupAttachment(GetCapsuleComponent());
+	HealthBar->SetWidgetSpace(EWidgetSpace::Screen);
+	HealthBar->SetWidgetClass(UEnemyHealthBarWidget::StaticClass());
+	HealthBar->SetDrawAtDesiredSize(true);
+	HealthBar->SetPivot(FVector2D(0.5f, 1.f));
+	HealthBar->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	HealthBar->SetGenerateOverlapEvents(false);
 
 	AttackTelegraph = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AttackTelegraph"));
 	AttackTelegraph->SetupAttachment(GetCapsuleComponent());
@@ -41,6 +57,16 @@ AEnemyCharacter::AEnemyCharacter()
 bool AEnemyCharacter::IsDead() const
 {
 	return Health->IsDead();
+}
+
+bool AEnemyCharacter::IsActionLocked() const
+{
+	return bKnockedDown || Block->IsBlocking();
+}
+
+bool AEnemyCharacter::IsPlayingFullBodyAnimation() const
+{
+	return bKnockedDown || Block->IsBlocking() || Attack->IsFullBodyAttack();
 }
 
 void AEnemyCharacter::BeginPlay()
@@ -57,8 +83,17 @@ void AEnemyCharacter::BeginPlay()
 	SetChaseSpeed(Behaviour == EEnemyBehaviour::Chase);
 
 	Attack->SetTelegraph(AttackTelegraph);
+	LastHealth = Health->GetHealth();
+	Health->OnHealthChanged.AddUniqueDynamic(this, &AEnemyCharacter::HandleHealthChanged);
 	Health->OnDeath.AddUniqueDynamic(this, &AEnemyCharacter::HandleDeath);
 	HitReaction->OnStaggered.AddUniqueDynamic(this, &AEnemyCharacter::HandleStaggered);
+	Block->OnBlockEnded.AddUniqueDynamic(this, &AEnemyCharacter::HandleBlockEnded);
+
+	HealthBar->SetRelativeLocation(FVector(0.f, 0.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + HealthBarOffset));
+	if (UEnemyHealthBarWidget* Bar = Cast<UEnemyHealthBarWidget>(HealthBar->GetUserWidgetObject()))
+	{
+		Bar->Bind(Health, AbilitySystem);
+	}
 }
 
 void AEnemyCharacter::SetHunterSpawner(AFogHunterSpawner* InSpawner)
@@ -84,11 +119,80 @@ void AEnemyCharacter::UpdateHunterChaseSpeed(float DistanceToPlayer)
 void AEnemyCharacter::HandleStaggered()
 {
 	Attack->CancelAttack();
+	Block->StopBlock();
+}
+
+void AEnemyCharacter::HandleHealthChanged(float CurrentHealth, float MaxHealth)
+{
+	const bool bDamaged = CurrentHealth < LastHealth;
+	LastHealth = CurrentHealth;
+
+	APawn* Attacker = Health->GetLastDamageInstigator();
+	if (!bDamaged || IsDead() || !Attacker || !Attacker->IsPlayerControlled() || !Block->CanBlock() || bKnockedDown
+		|| HitReaction->IsStaggered() || HitReaction->IsStunned() || Attack->IsWindingUp())
+	{
+		return;
+	}
+
+	// Raise the shield: drop the attack recovery and stand still.
+	Attack->CancelAttack();
+	if (AAIController* AI = Cast<AAIController>(GetController()))
+	{
+		AI->StopMovement();
+	}
+	SetInCombat(true);
+	Block->StartBlock(Attacker);
+}
+
+void AEnemyCharacter::HandleBlockEnded(EBlockEndReason Reason)
+{
+	if (IsDead())
+	{
+		return;
+	}
+	if (Reason == EBlockEndReason::Completed)
+	{
+		Attack->StartNamedAttack(Block->GetBlockTarget(), BlockCounterAttack);
+	}
+	else if (Reason == EBlockEndReason::Broken)
+	{
+		StartKnockdown();
+	}
+}
+
+void AEnemyCharacter::StartKnockdown()
+{
+	bKnockedDown = true;
+	Attack->CancelAttack();
+	if (AAIController* AI = Cast<AAIController>(GetController()))
+	{
+		AI->StopMovement();
+	}
+	// No stagger or knockback while down.
+	AbilitySystem->AddLooseGameplayTag(CombatTags::State_StaggerImmune);
+
+	float Duration = 1.f;
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (KnockdownAnimation && AnimInstance)
+	{
+		AnimInstance->PlaySlotAnimationAsDynamicMontage(KnockdownAnimation, TEXT("DefaultSlot"), 0.1f, 0.2f);
+		Duration = KnockdownAnimation->GetPlayLength();
+	}
+	GetWorldTimerManager().SetTimer(KnockdownTimer, this, &AEnemyCharacter::EndKnockdown, Duration);
+}
+
+void AEnemyCharacter::EndKnockdown()
+{
+	bKnockedDown = false;
+	AbilitySystem->RemoveLooseGameplayTag(CombatTags::State_StaggerImmune);
 }
 
 void AEnemyCharacter::HandleDeath()
 {
 	Attack->CancelAttack();
+	Block->StopBlock();
+	GetWorldTimerManager().ClearTimer(KnockdownTimer);
+	HealthBar->SetVisibility(false);
 
 	if (AAIController* AI = Cast<AAIController>(GetController()))
 	{

@@ -4,6 +4,7 @@
 #include "AbilitySystemGlobals.h"
 #include "AIController.h"
 #include "Animation/AnimInstance.h"
+#include "BlockComponent.h"
 #include "CombatAttributeSet.h"
 #include "CombatTags.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -23,6 +24,8 @@ void UHitReactionComponent::BeginPlay()
 		LastHealth = Health->GetHealth();
 		Health->OnHealthChanged.AddUniqueDynamic(this, &UHitReactionComponent::HandleHealthChanged);
 	}
+
+	Block = GetOwner()->FindComponentByClass<UBlockComponent>();
 
 	AbilitySystem = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
 	if (AbilitySystem && AbilitySystem->HasAttributeSetForAttribute(UCombatAttributeSet::GetPoiseAttribute()))
@@ -46,7 +49,8 @@ void UHitReactionComponent::ApplyKnockback(const FVector& Velocity)
 	ACharacter* Character = Cast<ACharacter>(GetOwner());
 	if (!Character || KnockbackScale <= 0.f || (Health && Health->IsDead())
 		|| (AbilitySystem && (AbilitySystem->HasMatchingGameplayTag(CombatTags::State_Invulnerable)
-			|| AbilitySystem->HasMatchingGameplayTag(CombatTags::State_StaggerImmune))))
+			|| AbilitySystem->HasMatchingGameplayTag(CombatTags::State_StaggerImmune)))
+		|| (Block && Block->IsBlockingFrom(Character->GetActorLocation() - Velocity)))
 	{
 		return;
 	}
@@ -105,6 +109,33 @@ void UHitReactionComponent::StartStagger()
 	GetWorld()->GetTimerManager().ClearTimer(PoiseRegenTimer);
 
 	AbilitySystem->AddLooseGameplayTag(CombatTags::State_Staggered);
+	Incapacitate();
+	GetWorld()->GetTimerManager().SetTimer(StaggerTimer, this, &UHitReactionComponent::EndStagger, StaggerDuration);
+}
+
+void UHitReactionComponent::ApplyStun(float Duration)
+{
+	if (bStunned || Duration <= 0.f || !AbilitySystem || (Health && Health->IsDead())
+		|| AbilitySystem->HasMatchingGameplayTag(CombatTags::State_Invulnerable))
+	{
+		return;
+	}
+
+	bStunned = true;
+	AbilitySystem->AddLooseGameplayTag(CombatTags::State_Stunned);
+	Incapacitate();
+	GetWorld()->GetTimerManager().SetTimer(StunTimer, this, &UHitReactionComponent::EndStun, Duration);
+}
+
+void UHitReactionComponent::EndStun()
+{
+	bStunned = false;
+	AbilitySystem->RemoveLooseGameplayTag(CombatTags::State_Stunned);
+	ReleaseMoveInput();
+}
+
+void UHitReactionComponent::Incapacitate()
+{
 	const FGameplayTagContainer AttackTags(CombatTags::Ability_Attack);
 	AbilitySystem->CancelAbilities(&AttackTags);
 
@@ -117,7 +148,7 @@ void UHitReactionComponent::StartStagger()
 		if (APlayerController* PC = Cast<APlayerController>(Character->GetController()))
 		{
 			PC->SetIgnoreMoveInput(true);
-			bIgnoringMoveInput = true;
+			++MoveInputLocks;
 		}
 		else if (AAIController* AI = Cast<AAIController>(Character->GetController()))
 		{
@@ -130,8 +161,22 @@ void UHitReactionComponent::StartStagger()
 			AnimInstance->PlaySlotAnimationAsDynamicMontage(StaggerAnimation, TEXT("DefaultSlot"), 0.1f, 0.2f);
 		}
 	}
+}
 
-	GetWorld()->GetTimerManager().SetTimer(StaggerTimer, this, &UHitReactionComponent::EndStagger, StaggerDuration);
+void UHitReactionComponent::ReleaseMoveInput()
+{
+	if (MoveInputLocks <= 0)
+	{
+		return;
+	}
+	--MoveInputLocks;
+	if (const APawn* Pawn = Cast<APawn>(GetOwner()))
+	{
+		if (AController* Controller = Pawn->GetController())
+		{
+			Controller->SetIgnoreMoveInput(false);
+		}
+	}
 }
 
 void UHitReactionComponent::EndStagger()
@@ -139,17 +184,7 @@ void UHitReactionComponent::EndStagger()
 	bStaggered = false;
 	AbilitySystem->RemoveLooseGameplayTag(CombatTags::State_Staggered);
 
-	if (bIgnoringMoveInput)
-	{
-		bIgnoringMoveInput = false;
-		if (const APawn* Pawn = Cast<APawn>(GetOwner()))
-		{
-			if (AController* Controller = Pawn->GetController())
-			{
-				Controller->SetIgnoreMoveInput(false);
-			}
-		}
-	}
+	ReleaseMoveInput();
 	RefillPoise();
 	if (StaggerCooldown > 0.f)
 	{

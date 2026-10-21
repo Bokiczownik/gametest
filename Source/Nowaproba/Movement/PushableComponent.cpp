@@ -80,7 +80,7 @@ void UPushableComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 		Push += Direction * Penetration * Share;
 	}
 
-	const float MaxStep = PushSpeed * DeltaTime;
+	const float MaxStep = PushSpeed * PushSpeedScale * DeltaTime;
 	if (Push.SizeSquared() > FMath::Square(MaxStep))
 	{
 		Push = Push.GetSafeNormal() * MaxStep;

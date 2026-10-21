@@ -84,6 +84,8 @@ private:
 	UFUNCTION()
 	void HandleTakeAnyDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);
 
+	/** Source = damage causer, so a block (UCombatAttributeSet) can tell where the hit came from. */
+	void ApplyDamageFrom(float Amount, const AActor* Source);
 	void SetHealth(float NewHealth);
 	void Die();
 };

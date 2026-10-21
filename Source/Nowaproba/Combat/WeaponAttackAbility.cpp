@@ -20,6 +20,7 @@ UWeaponAttackAbility::UWeaponAttackAbility()
 	SetAssetTags(FGameplayTagContainer(CombatTags::Ability_Attack));
 	ActivationBlockedTags.AddTag(CombatTags::State_Invulnerable);
 	ActivationBlockedTags.AddTag(CombatTags::State_Staggered);
+	ActivationBlockedTags.AddTag(CombatTags::State_Stunned);
 }
 
 UWeaponComponent* UWeaponAttackAbility::FindWeapon(const FGameplayAbilityActorInfo* ActorInfo)

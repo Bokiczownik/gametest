@@ -292,7 +292,7 @@ void UWeaponComponent::ApplyHit(AActor* Target)
 	UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
 	if (TargetASC && TargetASC->HasAttributeSetForAttribute(UCombatAttributeSet::GetPoiseDamageAttribute()))
 	{
-		UCombatAttributeSet::ApplyDamage(TargetASC, 0.f, CurrentAttack->PoiseDamage);
+		UCombatAttributeSet::ApplyDamage(TargetASC, 0.f, CurrentAttack->PoiseDamage, GetOwner());
 	}
 
 	if (UHitReactionComponent* HitReaction = Target->FindComponentByClass<UHitReactionComponent>())

@@ -6,6 +6,7 @@
 
 class UAbilitySystemComponent;
 class UAnimSequenceBase;
+class UBlockComponent;
 class UHealthComponent;
 class UMaterialInterface;
 struct FOnAttributeChangeData;
@@ -19,6 +20,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStaggered);
  * StaggerAnimation plays, a player cannot move and an AI stops moving, for StaggerDuration; OnStaggered lets the owner
  * cancel its own actions. Poise refills to MaxPoise after the stagger, or PoiseRegenDelay after the last poise damage.
  * For StaggerCooldown after a stagger ends the owner has tag State.StaggerImmune: no poise damage and no knockback.
+ * ApplyStun works like a stagger of a given length without touching poise (tag State.Stunned; StaggerAnimation plays).
+ * Knockback from the front is ignored while the owner blocks (UBlockComponent).
  */
 UCLASS(ClassGroup = (Gameplay), meta = (BlueprintSpawnableComponent))
 class NOWAPROBA_API UHitReactionComponent : public UActorComponent
@@ -33,6 +36,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Hit Reaction")
 	bool IsStaggered() const { return bStaggered; }
 
+	/** Owner cannot move, attack or dash for Duration (s). Ignored when dead, invulnerable or already stunned. */
+	UFUNCTION(BlueprintCallable, Category = "Hit Reaction")
+	void ApplyStun(float Duration);
+
+	UFUNCTION(BlueprintPure, Category = "Hit Reaction")
+	bool IsStunned() const { return bStunned; }
+
+	/** Staggered or stunned: lets the owner cancel its own actions. */
 	UPROPERTY(BlueprintAssignable, Category = "Hit Reaction")
 	FOnStaggered OnStaggered;
 
@@ -77,13 +88,19 @@ private:
 	UPROPERTY()
 	TObjectPtr<UHealthComponent> Health;
 
+	UPROPERTY()
+	TObjectPtr<UBlockComponent> Block;
+
 	float LastHealth = 0.f;
 	bool bStaggered = false;
-	bool bIgnoringMoveInput = false;
+	bool bStunned = false;
+	/** Move input locks held (stagger and stun each take one). */
+	int32 MoveInputLocks = 0;
 	FTimerHandle FlashTimer;
 	FTimerHandle StaggerTimer;
 	FTimerHandle PoiseRegenTimer;
 	FTimerHandle StaggerCooldownTimer;
+	FTimerHandle StunTimer;
 
 	UFUNCTION()
 	void HandleHealthChanged(float CurrentHealth, float MaxHealth);
@@ -91,6 +108,10 @@ private:
 	void HandlePoiseChanged(const FOnAttributeChangeData& Data);
 	void StartStagger();
 	void EndStagger();
+	void EndStun();
+	/** Stops the owner (move input / AI movement), cancels its attacks and plays StaggerAnimation. */
+	void Incapacitate();
+	void ReleaseMoveInput();
 	void EndStaggerCooldown();
 	void RefillPoise();
 	void EndFlash();

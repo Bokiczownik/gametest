@@ -53,7 +53,10 @@ float UEnemyAttackComponent::GetAttackRange() const
 	float Range = 0.f;
 	for (const FEnemyAttack& Attack : Attacks)
 	{
-		Range = FMath::Max(Range, Attack.GetRange());
+		if (Attack.Weight > 0.f)
+		{
+			Range = FMath::Max(Range, Attack.GetRange());
+		}
 	}
 	return Range;
 }
@@ -106,11 +109,26 @@ void UEnemyAttackComponent::StartAttack(AActor* Target)
 
 	FVector ToTarget = Target->GetActorLocation() - Owner->GetActorLocation();
 	ToTarget.Z = 0.f;
-	CurrentAttackIndex = PickAttack(ToTarget.Size());
-	if (CurrentAttackIndex == INDEX_NONE)
+	BeginAttack(Target, PickAttack(ToTarget.Size()));
+}
+
+void UEnemyAttackComponent::StartNamedAttack(AActor* Target, FName Name)
+{
+	if (bAttacking || !Target || !Cast<ACharacter>(GetOwner()))
 	{
 		return;
 	}
+	BeginAttack(Target, Attacks.IndexOfByPredicate([Name](const FEnemyAttack& Attack) { return Attack.Name == Name; }));
+}
+
+void UEnemyAttackComponent::BeginAttack(AActor* Target, int32 AttackIndex)
+{
+	ACharacter* Owner = Cast<ACharacter>(GetOwner());
+	if (!Attacks.IsValidIndex(AttackIndex))
+	{
+		return;
+	}
+	CurrentAttackIndex = AttackIndex;
 	const FEnemyAttack& Attack = Attacks[CurrentAttackIndex];
 
 	bAttacking = true;
@@ -215,13 +233,14 @@ void UEnemyAttackComponent::Strike()
 			UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
 			if (TargetASC && TargetASC->HasAttributeSetForAttribute(UCombatAttributeSet::GetPoiseDamageAttribute()))
 			{
-				UCombatAttributeSet::ApplyDamage(TargetASC, 0.f, Attack.PoiseDamage);
+				UCombatAttributeSet::ApplyDamage(TargetASC, 0.f, Attack.PoiseDamage, Owner);
 			}
 
 			if (UHitReactionComponent* HitReaction = Target->FindComponentByClass<UHitReactionComponent>())
 			{
 				const FVector Direction = (Target->GetActorLocation() - Owner->GetActorLocation()).GetSafeNormal2D();
 				HitReaction->ApplyKnockback(Direction * Attack.Knockback);
+				HitReaction->ApplyStun(Attack.StunDuration);
 			}
 		}
 
