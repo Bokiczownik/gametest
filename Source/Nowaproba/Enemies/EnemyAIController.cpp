@@ -101,6 +101,9 @@ void AEnemyAIController::UpdateBehaviour()
 		return;
 	}
 
+	// Weapon raised only while running at the player or about to attack, not while stuck (e.g. no path yet).
+	Self->SetInCombat(Distance <= Attack->GetAttackRange() * 1.5f || Self->GetVelocity().Size2D() > 50.f);
+
 	if (Distance <= Attack->GetAttackRange())
 	{
 		StopMovement();
