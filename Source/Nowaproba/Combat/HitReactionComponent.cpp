@@ -82,7 +82,8 @@ void UHitReactionComponent::HandlePoiseChanged(const FOnAttributeChangeData& Dat
 	}
 
 	GetWorld()->GetTimerManager().SetTimer(PoiseRegenTimer, this, &UHitReactionComponent::RefillPoise, PoiseRegenDelay);
-	if (Data.NewValue <= 0.f && !bStaggered && !(Health && Health->IsDead()))
+	if (Data.NewValue <= 0.f && !bStaggered && !GetWorld()->GetTimerManager().IsTimerActive(StaggerCooldownTimer)
+		&& !(Health && Health->IsDead()))
 	{
 		StartStagger();
 	}
@@ -140,6 +141,18 @@ void UHitReactionComponent::EndStagger()
 		}
 	}
 	RefillPoise();
+	if (StaggerCooldown > 0.f)
+	{
+		GetWorld()->GetTimerManager().SetTimer(StaggerCooldownTimer, this, &UHitReactionComponent::EndStaggerCooldown, StaggerCooldown);
+	}
+}
+
+void UHitReactionComponent::EndStaggerCooldown()
+{
+	if (AbilitySystem && AbilitySystem->GetNumericAttribute(UCombatAttributeSet::GetPoiseAttribute()) <= 0.f)
+	{
+		RefillPoise();
+	}
 }
 
 void UHitReactionComponent::RefillPoise()
