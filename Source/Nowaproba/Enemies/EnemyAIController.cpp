@@ -101,6 +101,14 @@ void AEnemyAIController::UpdateBehaviour()
 		return;
 	}
 
+	UpdateCombat(Player, Distance);
+}
+
+void AEnemyAIController::UpdateCombat(APawn* Player, float Distance)
+{
+	AEnemyCharacter* Self = Enemy.Get();
+	UEnemyAttackComponent* Attack = Self->GetAttack();
+
 	// Weapon raised only while running at the player or about to attack, not while stuck (e.g. no path yet).
 	Self->SetInCombat(Distance <= Attack->GetAttackRange() * 1.5f || Self->GetVelocity().Size2D() > 50.f);
 
@@ -111,7 +119,7 @@ void AEnemyAIController::UpdateBehaviour()
 		return;
 	}
 
-	if (bHunter)
+	if (Self->Behaviour == EEnemyBehaviour::FogHunter)
 	{
 		Self->UpdateHunterChaseSpeed(Distance);
 	}
@@ -170,6 +178,7 @@ void AEnemyAIController::SetChasing(bool bNewChasing)
 		Self->SetChaseSpeed(bChasing || Self->Behaviour == EEnemyBehaviour::Chase);
 		Self->SetInCombat(bChasing);
 	}
+	OnChaseChanged(bChasing);
 }
 
 void AEnemyAIController::UpdatePatrol()
@@ -227,11 +236,16 @@ void AEnemyAIController::ReturnHome()
 
 void AEnemyAIController::StopChase()
 {
+	const bool bWasChasing = bChasing;
 	if (bChasing)
 	{
 		StopMovement();
 	}
 	bChasing = false;
+	if (bWasChasing)
+	{
+		OnChaseChanged(false);
+	}
 	if (AEnemyCharacter* Self = Enemy.Get())
 	{
 		Self->SetInCombat(false);

@@ -7,10 +7,13 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "EnemyProjectile.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
+#include "NavigationSystem.h"
 #include "TimerManager.h"
 #include "../Combat/CombatAttributeSet.h"
 #include "../Combat/HitReactionComponent.h"
@@ -18,6 +21,9 @@
 namespace
 {
 	const FName AttackSlot = TEXT("DefaultSlot");
+
+	/** Vertical launch speed of a backstep hop; its horizontal speed is set so the hop covers BackstepDistance. */
+	constexpr float BackstepUpSpeed = 300.f;
 }
 
 UEnemyAttackComponent::UEnemyAttackComponent()
@@ -67,14 +73,49 @@ void UEnemyAttackComponent::SetTelegraph(UPrimitiveComponent* InTelegraph)
 	SetTelegraphVisible(false);
 }
 
+bool FEnemyAttack::IsRanged() const
+{
+	return Projectile.Get() != nullptr;
+}
+
+bool UEnemyAttackComponent::IsAttackReady(int32 AttackIndex) const
+{
+	const double Now = GetWorld()->GetTimeSeconds();
+	return Now >= SharedReadyTime && (!ReadyTimes.IsValidIndex(AttackIndex) || Now >= ReadyTimes[AttackIndex]);
+}
+
+bool UEnemyAttackComponent::IsOffCooldown() const
+{
+	for (int32 i = 0; i < Attacks.Num(); ++i)
+	{
+		if (Attacks[i].Weight > 0.f && IsAttackReady(i))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UEnemyAttackComponent::CanStartAttack(const AActor* Target) const
+{
+	const AActor* Owner = GetOwner();
+	return !bAttacking && Target && Owner && PickAttack(FVector::Dist2D(Target->GetActorLocation(), Owner->GetActorLocation())) != INDEX_NONE;
+}
+
 int32 UEnemyAttackComponent::PickAttack(float Distance) const
 {
-	float TotalWeight = 0.f;
-	for (const FEnemyAttack& Attack : Attacks)
+	const auto IsUsable = [this, Distance](int32 i)
 	{
-		if (Distance <= Attack.GetRange())
+		const FEnemyAttack& Attack = Attacks[i];
+		return Attack.Weight > 0.f && Distance <= Attack.GetRange() && Distance >= Attack.MinRange && IsAttackReady(i);
+	};
+
+	float TotalWeight = 0.f;
+	for (int32 i = 0; i < Attacks.Num(); ++i)
+	{
+		if (IsUsable(i))
 		{
-			TotalWeight += Attack.Weight;
+			TotalWeight += Attacks[i].Weight;
 		}
 	}
 	if (TotalWeight <= 0.f)
@@ -86,7 +127,7 @@ int32 UEnemyAttackComponent::PickAttack(float Distance) const
 	int32 Last = INDEX_NONE;
 	for (int32 i = 0; i < Attacks.Num(); ++i)
 	{
-		if (Distance <= Attacks[i].GetRange() && Attacks[i].Weight > 0.f)
+		if (IsUsable(i))
 		{
 			Last = i;
 			Roll -= Attacks[i].Weight;
@@ -136,9 +177,18 @@ void UEnemyAttackComponent::BeginAttack(AActor* Target, int32 AttackIndex)
 
 	// Face the target; without tracking this commits the hit area to where it was telegraphed.
 	FaceTarget(180.f);
-	SetComponentTickEnabled(bTrackTarget);
+	SetComponentTickEnabled(bTrackTarget || Attack.IsRanged());
 
-	if (Telegraph)
+	if (Attack.BackstepDistance > 0.f)
+	{
+		TryBackstep(Attack.BackstepDistance);
+	}
+
+	if (Attack.IsRanged())
+	{
+		UpdateRangedTelegraph(Attack);
+	}
+	else if (Telegraph)
 	{
 		// Owner origin is the capsule centre; the telegraph sits on the ground under the hit sphere.
 		const float HalfHeight = Owner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
@@ -162,7 +212,83 @@ void UEnemyAttackComponent::BeginAttack(AActor* Target, int32 AttackIndex)
 void UEnemyAttackComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	FaceTarget(TrackTurnRate * DeltaTime);
+	if (bTrackTarget)
+	{
+		FaceTarget(TrackTurnRate * DeltaTime);
+	}
+	if (Attacks.IsValidIndex(CurrentAttackIndex) && Attacks[CurrentAttackIndex].IsRanged())
+	{
+		UpdateRangedTelegraph(Attacks[CurrentAttackIndex]);
+	}
+}
+
+void UEnemyAttackComponent::UpdateRangedTelegraph(const FEnemyAttack& Attack)
+{
+	const ACharacter* Owner = Cast<ACharacter>(GetOwner());
+	if (!Telegraph || !Owner)
+	{
+		return;
+	}
+
+	// A lane along the facing that reaches the target (or the max distance) when the shot fires.
+	float Length = Attack.Reach;
+	if (const AActor* Target = CurrentTarget.Get())
+	{
+		float TargetRadius = 0.f;
+		float TargetHalfHeight = 0.f;
+		Target->GetSimpleCollisionCylinder(TargetRadius, TargetHalfHeight);
+		Length = FMath::Min(Length, FVector::Dist2D(Target->GetActorLocation(), Owner->GetActorLocation()) + TargetRadius);
+	}
+	const float Elapsed = Owner->GetWorldTimerManager().GetTimerElapsed(AttackTimer);
+	Length = FMath::Max(1.f, Length * FMath::Clamp(Elapsed / Attack.WindupTime, 0.f, 1.f));
+
+	const float HalfHeight = Owner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	Telegraph->SetRelativeLocation(FVector(Length * 0.5f, 0.f, -HalfHeight + TelegraphGroundOffset));
+	Telegraph->SetRelativeScale3D(FVector(Length / 100.f, Attack.Radius / 50.f, Telegraph->GetRelativeScale3D().Z));
+}
+
+void UEnemyAttackComponent::FireProjectile(const FEnemyAttack& Attack, const AActor& Target)
+{
+	APawn* Owner = Cast<APawn>(GetOwner());
+	if (!Owner)
+	{
+		return;
+	}
+
+	// Yaw from the facing the lane showed, pitch toward the target's centre, plus the attack's aim error.
+	const FVector Forward = Owner->GetActorForwardVector().GetSafeNormal2D();
+	const FVector Start = Owner->GetActorLocation() + Forward * ProjectileSpawnOffset.X + FVector(0.f, 0.f, ProjectileSpawnOffset.Z);
+	const FVector ToTarget = Target.GetActorLocation() - Start;
+	FVector Direction = Forward * ToTarget.Size2D();
+	Direction.Z = ToTarget.Z;
+	Direction = Direction.GetSafeNormal().RotateAngleAxis(FMath::FRandRange(-Attack.AimSpread, Attack.AimSpread), FVector::UpVector);
+
+	// Deferred so the projectile carries its damage before it can overlap anything.
+	const FTransform SpawnTransform(Direction.Rotation(), Start);
+	AEnemyProjectile* Projectile = GetWorld()->SpawnActorDeferred<AEnemyProjectile>(Attack.Projectile, SpawnTransform, Owner, Owner,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (Projectile)
+	{
+		Projectile->Launch(Attack, Direction);
+		Projectile->FinishSpawning(SpawnTransform);
+	}
+}
+
+void UEnemyAttackComponent::TryBackstep(float Distance)
+{
+	ACharacter* Owner = Cast<ACharacter>(GetOwner());
+	const FVector Away = -Owner->GetActorForwardVector().GetSafeNormal2D();
+	const FVector Feet = Owner->GetNavAgentLocation();
+
+	// Only where the navmesh continues behind (no wall, corner or ledge); otherwise shoot from where it stands.
+	FVector HitLocation;
+	if (UNavigationSystemV1::NavigationRaycast(Owner, Feet, Feet + Away * Distance, HitLocation))
+	{
+		return;
+	}
+
+	const float AirTime = 2.f * BackstepUpSpeed / FMath::Max(1.f, FMath::Abs(Owner->GetCharacterMovement()->GetGravityZ()));
+	Owner->LaunchCharacter(Away * (Distance / AirTime) + FVector(0.f, 0.f, BackstepUpSpeed), true, true);
 }
 
 void UEnemyAttackComponent::FaceTarget(float MaxYawDelta)
@@ -219,30 +345,42 @@ void UEnemyAttackComponent::Strike()
 	{
 		const FEnemyAttack& Attack = Attacks[CurrentAttackIndex];
 
-		// Hit if the target's capsule touches the hit sphere (2D) and it is roughly at the same height.
-		const FVector Center = Owner->GetActorLocation() + Owner->GetActorForwardVector() * Attack.Reach;
-		float TargetRadius = 0.f;
-		float TargetHalfHeight = 0.f;
-		Target->GetSimpleCollisionCylinder(TargetRadius, TargetHalfHeight);
-		const FVector Delta = Target->GetActorLocation() - Center;
-		if (Delta.Size2D() <= Attack.Radius + TargetRadius && FMath::Abs(Delta.Z) <= TargetHalfHeight + Attack.Radius)
+		if (Attack.IsRanged())
 		{
-			const APawn* Pawn = Cast<APawn>(Owner);
-			UGameplayStatics::ApplyDamage(Target, Attack.Damage, Pawn ? Pawn->GetController() : nullptr, Owner, nullptr);
-
-			UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
-			if (TargetASC && TargetASC->HasAttributeSetForAttribute(UCombatAttributeSet::GetPoiseDamageAttribute()))
+			FireProjectile(Attack, *Target);
+		}
+		else
+		{
+			// Hit if the target's capsule touches the hit sphere (2D) and it is roughly at the same height.
+			const FVector Center = Owner->GetActorLocation() + Owner->GetActorForwardVector() * Attack.Reach;
+			float TargetRadius = 0.f;
+			float TargetHalfHeight = 0.f;
+			Target->GetSimpleCollisionCylinder(TargetRadius, TargetHalfHeight);
+			const FVector Delta = Target->GetActorLocation() - Center;
+			if (Delta.Size2D() <= Attack.Radius + TargetRadius && FMath::Abs(Delta.Z) <= TargetHalfHeight + Attack.Radius)
 			{
-				UCombatAttributeSet::ApplyDamage(TargetASC, 0.f, Attack.PoiseDamage, Owner);
-			}
+				const APawn* Pawn = Cast<APawn>(Owner);
+				UGameplayStatics::ApplyDamage(Target, Attack.Damage, Pawn ? Pawn->GetController() : nullptr, Owner, nullptr);
 
-			if (UHitReactionComponent* HitReaction = Target->FindComponentByClass<UHitReactionComponent>())
-			{
-				const FVector Direction = (Target->GetActorLocation() - Owner->GetActorLocation()).GetSafeNormal2D();
-				HitReaction->ApplyKnockback(Direction * Attack.Knockback);
-				HitReaction->ApplyStun(Attack.StunDuration);
+				UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
+				if (TargetASC && TargetASC->HasAttributeSetForAttribute(UCombatAttributeSet::GetPoiseDamageAttribute()))
+				{
+					UCombatAttributeSet::ApplyDamage(TargetASC, 0.f, Attack.PoiseDamage, Owner);
+				}
+
+				if (UHitReactionComponent* HitReaction = Target->FindComponentByClass<UHitReactionComponent>())
+				{
+					const FVector Direction = (Target->GetActorLocation() - Owner->GetActorLocation()).GetSafeNormal2D();
+					HitReaction->ApplyKnockback(Direction * Attack.Knockback);
+					HitReaction->ApplyStun(Attack.StunDuration);
+				}
 			}
 		}
+
+		const double RecoveryEnd = GetWorld()->GetTimeSeconds() + Attack.RecoveryTime;
+		ReadyTimes.SetNumZeroed(Attacks.Num());
+		ReadyTimes[CurrentAttackIndex] = RecoveryEnd + Attack.Cooldown;
+		SharedReadyTime = RecoveryEnd + SharedCooldown;
 
 		bRecovering = true;
 		Owner->GetWorldTimerManager().SetTimer(AttackTimer, this, &UEnemyAttackComponent::FinishAttack, FMath::Max(Attack.RecoveryTime, KINDA_SMALL_NUMBER), false);

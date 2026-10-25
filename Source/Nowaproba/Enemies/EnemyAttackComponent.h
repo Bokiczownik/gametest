@@ -4,10 +4,11 @@
 #include "Components/ActorComponent.h"
 #include "EnemyAttackComponent.generated.h"
 
+class AEnemyProjectile;
 class UAnimSequenceBase;
 class UPrimitiveComponent;
 
-/** One telegraphed enemy melee attack. */
+/** One telegraphed enemy attack: melee (hit sphere) or ranged (Projectile). */
 USTRUCT(BlueprintType)
 struct FEnemyAttack
 {
@@ -47,6 +48,14 @@ struct FEnemyAttack
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack", meta = (ClampMin = "0"))
 	float StunDuration = 0.f;
 
+	/** Only picked while the target is at least this far (2D). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack", meta = (ClampMin = "0"))
+	float MinRange = 0.f;
+
+	/** Not picked again until this long after its recovery ends (s). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack", meta = (ClampMin = "0"))
+	float Cooldown = 0.f;
+
 	/** Relative chance among the attacks that can reach the target; 0 = only started by name, not counted in the attack range. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack", meta = (ClampMin = "0"))
 	float Weight = 1.f;
@@ -63,17 +72,35 @@ struct FEnemyAttack
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Animation")
 	bool bFullBody = false;
 
+	/** Set = ranged: fired at the strike along the owner's facing instead of the hit sphere; Reach is its max distance, Radius its hit radius. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Ranged")
+	TSubclassOf<AEnemyProjectile> Projectile;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Ranged", meta = (ClampMin = "1"))
+	float ProjectileSpeed = 1800.f;
+
+	/** Random yaw error of the shot, +- degrees. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Ranged", meta = (ClampMin = "0", ClampMax = "45"))
+	float AimSpread = 0.f;
+
+	/** Hop this far away from the target at the start (only where the navmesh continues behind the owner); 0 = none. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Ranged", meta = (ClampMin = "0"))
+	float BackstepDistance = 0.f;
+
 	float GetRange() const { return Reach + Radius; }
+	bool IsRanged() const;
 };
 
 /**
- * Telegraphed enemy melee attacks: StartAttack picks one of Attacks that can reach the target (weighted random), turns
+ * Telegraphed enemy attacks: StartAttack picks one of Attacks that can reach the target and is off cooldown (weighted random), turns
  * the owner to the target, plays its animation and shows the telegraph (hit area on the ground, sized to the attack)
  * for WindupTime; the strike then hits the target if it is still inside the sphere of Radius at Reach in front of the
  * owner: engine damage (UGameplayStatics::ApplyDamage), PoiseDamage (UCombatAttributeSet) and knockback
  * (UHitReactionComponent); then the owner recovers for RecoveryTime. Timers drive the attack; with bTrackTarget the
  * component ticks during the windup only, turning the owner (and the telegraph) toward the target at TrackTurnRate.
  * The telegraph is scaled to Radius (engine Cylinder: 100 cm wide at scale 1).
+ * Ranged attacks (FEnemyAttack::Projectile) show a lane that grows from the owner toward the target during the windup
+ * (the component ticks) and fire the projectile at the strike; the optional backstep hops away first.
  */
 UCLASS(ClassGroup = (Gameplay), meta = (BlueprintSpawnableComponent))
 class NOWAPROBA_API UEnemyAttackComponent : public UActorComponent
@@ -111,6 +138,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
 	bool IsHoldingPosition() const { return bAttacking && !(bRecovering && bMoveDuringRecovery); }
 
+	/** True if StartAttack(Target) would start an attack now (none running, one off cooldown covers the 2D distance). */
+	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
+	bool CanStartAttack(const AActor* Target) const;
+
+	/** True when SharedCooldown and the own cooldown of some attack with Weight > 0 have run out (range not checked). */
+	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
+	bool IsOffCooldown() const;
+
+	const FVector& GetProjectileSpawnOffset() const { return ProjectileSpawnOffset; }
+
 	/** Distance from the owner within which some attack can hit (largest Reach + Radius of attacks with Weight > 0). */
 	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
 	float GetAttackRange() const;
@@ -138,6 +175,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Attack")
 	bool bMoveDuringRecovery = false;
 
+	/** No attack is picked until this long after any attack's recovery ends (s). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Attack", meta = (ClampMin = "0"))
+	float SharedCooldown = 0.f;
+
+	/** Projectile spawn point relative to the owner (X along its facing, Z up). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Attack")
+	FVector ProjectileSpawnOffset = FVector(50.f, 0.f, 20.f);
+
 	/** Telegraph height above the owner's feet (avoids z-fighting with the ground). */
 	UPROPERTY(EditAnywhere, Category = "Enemy Attack")
 	float TelegraphGroundOffset = 2.f;
@@ -151,7 +196,10 @@ private:
 	FTimerHandle AttackTimer;
 	bool bAttacking = false;
 	bool bRecovering = false;
+	TArray<double> ReadyTimes;
+	double SharedReadyTime = 0.0;
 
+	bool IsAttackReady(int32 AttackIndex) const;
 	int32 PickAttack(float Distance) const;
 	void BeginAttack(AActor* Target, int32 AttackIndex);
 	void Strike();
@@ -159,4 +207,7 @@ private:
 	void SetTelegraphVisible(bool bVisible);
 	void StopAttackAnimation();
 	void FaceTarget(float MaxYawDelta);
+	void UpdateRangedTelegraph(const FEnemyAttack& Attack);
+	void FireProjectile(const FEnemyAttack& Attack, const AActor& Target);
+	void TryBackstep(float Distance);
 };

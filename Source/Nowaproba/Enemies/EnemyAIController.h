@@ -31,6 +31,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Enemy AI", meta = (ClampMin = "10"))
 	float ArriveDistance = 100.f;
 
+	/** One update while chasing an engaged, reachable player (not while attacking, blocking or staggered); Distance is 2D. Melee: close in and attack within the attack range. */
+	virtual void UpdateCombat(APawn* Player, float Distance);
+
+	/** Called when the chase starts or ends. */
+	virtual void OnChaseChanged(bool bNowChasing) {}
+
+	AEnemyCharacter* GetEnemy() const { return Enemy.Get(); }
+
 private:
 	TWeakObjectPtr<AEnemyCharacter> Enemy;
 	TWeakObjectPtr<APawn> Target;
