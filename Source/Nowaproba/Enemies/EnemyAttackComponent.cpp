@@ -12,6 +12,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/RootMotionSource.h"
 #include "Kismet/GameplayStatics.h"
 #include "NavigationSystem.h"
 #include "TimerManager.h"
@@ -24,6 +25,18 @@ namespace
 
 	/** Vertical launch speed of a backstep hop; its horizontal speed is set so the hop covers BackstepDistance. */
 	constexpr float BackstepUpSpeed = 300.f;
+
+	const FName ChargeRootMotionName = TEXT("EnemyCharge");
+
+	/** The target's capsule touches the sphere (2D) and is roughly at the same height. */
+	bool IsTouchingSphere(const AActor& Target, const FVector& Center, float Radius)
+	{
+		float TargetRadius = 0.f;
+		float TargetHalfHeight = 0.f;
+		Target.GetSimpleCollisionCylinder(TargetRadius, TargetHalfHeight);
+		const FVector Delta = Target.GetActorLocation() - Center;
+		return Delta.Size2D() <= Radius + TargetRadius && FMath::Abs(Delta.Z) <= TargetHalfHeight + Radius;
+	}
 }
 
 UEnemyAttackComponent::UEnemyAttackComponent()
@@ -94,6 +107,17 @@ bool UEnemyAttackComponent::IsOffCooldown() const
 		}
 	}
 	return false;
+}
+
+const FEnemyAttack* UEnemyAttackComponent::FindAttack(FName Name) const
+{
+	return Attacks.FindByPredicate([Name](const FEnemyAttack& Attack) { return Attack.Name == Name; });
+}
+
+bool UEnemyAttackComponent::CanStartNamedAttack(FName Name) const
+{
+	const int32 Index = Attacks.IndexOfByPredicate([Name](const FEnemyAttack& Attack) { return Attack.Name == Name; });
+	return !bAttacking && Index != INDEX_NONE && IsAttackReady(Index);
 }
 
 bool UEnemyAttackComponent::CanStartAttack(const AActor* Target) const
@@ -177,16 +201,16 @@ void UEnemyAttackComponent::BeginAttack(AActor* Target, int32 AttackIndex)
 
 	// Face the target; without tracking this commits the hit area to where it was telegraphed.
 	FaceTarget(180.f);
-	SetComponentTickEnabled(bTrackTarget || Attack.IsRanged());
+	SetComponentTickEnabled(bTrackTarget || Attack.IsRanged() || Attack.IsCharge());
 
 	if (Attack.BackstepDistance > 0.f)
 	{
 		TryBackstep(Attack.BackstepDistance);
 	}
 
-	if (Attack.IsRanged())
+	if (Attack.IsRanged() || Attack.IsCharge())
 	{
-		UpdateRangedTelegraph(Attack);
+		UpdateLaneTelegraph(Attack);
 	}
 	else if (Telegraph)
 	{
@@ -212,17 +236,30 @@ void UEnemyAttackComponent::BeginAttack(AActor* Target, int32 AttackIndex)
 void UEnemyAttackComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	if (!Attacks.IsValidIndex(CurrentAttackIndex))
+	{
+		return;
+	}
+	const FEnemyAttack& Attack = Attacks[CurrentAttackIndex];
+	if (bCharging)
+	{
+		if (CheckChargeHit(Attack))
+		{
+			EndCharge();
+		}
+		return;
+	}
 	if (bTrackTarget)
 	{
 		FaceTarget(TrackTurnRate * DeltaTime);
 	}
-	if (Attacks.IsValidIndex(CurrentAttackIndex) && Attacks[CurrentAttackIndex].IsRanged())
+	if (Attack.IsRanged() || Attack.IsCharge())
 	{
-		UpdateRangedTelegraph(Attacks[CurrentAttackIndex]);
+		UpdateLaneTelegraph(Attack);
 	}
 }
 
-void UEnemyAttackComponent::UpdateRangedTelegraph(const FEnemyAttack& Attack)
+void UEnemyAttackComponent::UpdateLaneTelegraph(const FEnemyAttack& Attack)
 {
 	const ACharacter* Owner = Cast<ACharacter>(GetOwner());
 	if (!Telegraph || !Owner)
@@ -291,6 +328,88 @@ void UEnemyAttackComponent::TryBackstep(float Distance)
 	Owner->LaunchCharacter(Away * (Distance / AirTime) + FVector(0.f, 0.f, BackstepUpSpeed), true, true);
 }
 
+void UEnemyAttackComponent::StartCharge(const FEnemyAttack& Attack, const AActor& Target)
+{
+	ACharacter* Owner = Cast<ACharacter>(GetOwner());
+
+	// Same length as the lane shown during the windup; the charge itself runs with the locomotion animation.
+	float TargetRadius = 0.f;
+	float TargetHalfHeight = 0.f;
+	Target.GetSimpleCollisionCylinder(TargetRadius, TargetHalfHeight);
+	const float Length = FMath::Min(Attack.Reach, FVector::Dist2D(Target.GetActorLocation(), Owner->GetActorLocation()) + TargetRadius);
+	const float Duration = FMath::Max(Length / Attack.ChargeSpeed, KINDA_SMALL_NUMBER);
+	StopAttackAnimation();
+
+	TSharedPtr<FRootMotionSource_ConstantForce> Force = MakeShared<FRootMotionSource_ConstantForce>();
+	Force->InstanceName = ChargeRootMotionName;
+	Force->AccumulateMode = ERootMotionAccumulateMode::Override;
+	Force->Priority = 5;
+	ChargeDirection = Owner->GetActorForwardVector().GetSafeNormal2D();
+	Force->Force = ChargeDirection * Attack.ChargeSpeed;
+	Force->Duration = Duration;
+	Force->Settings.SetFlag(ERootMotionSourceSettingsFlags::IgnoreZAccumulate);
+	Force->FinishVelocityParams.Mode = ERootMotionFinishVelocityMode::SetVelocity;
+	Force->FinishVelocityParams.SetVelocity = FVector::ZeroVector;
+	ChargeRootMotionID = Owner->GetCharacterMovement()->ApplyRootMotionSource(Force);
+
+	bCharging = true;
+	ChargeCheckedLocation = Owner->GetActorLocation();
+	SetComponentTickEnabled(true);
+	Owner->GetWorldTimerManager().SetTimer(AttackTimer, this, &UEnemyAttackComponent::EndCharge, Duration, false);
+}
+
+bool UEnemyAttackComponent::CheckChargeHit(const FEnemyAttack& Attack)
+{
+	const ACharacter* Owner = Cast<ACharacter>(GetOwner());
+	AActor* Target = CurrentTarget.Get();
+	if (!Owner || !Target)
+	{
+		return false;
+	}
+
+	// Swept from the last check: a fast charge can pass the target between two frames.
+	const FVector Front = ChargeDirection * Owner->GetCapsuleComponent()->GetScaledCapsuleRadius();
+	const FVector From = ChargeCheckedLocation + Front;
+	const FVector To = Owner->GetActorLocation() + Front;
+	ChargeCheckedLocation = Owner->GetActorLocation();
+
+	float TargetRadius = 0.f;
+	float TargetHalfHeight = 0.f;
+	Target->GetSimpleCollisionCylinder(TargetRadius, TargetHalfHeight);
+	const FVector TargetLocation = Target->GetActorLocation();
+	const float Distance = FMath::PointDistToSegment(FVector(TargetLocation.X, TargetLocation.Y, 0.f), FVector(From.X, From.Y, 0.f), FVector(To.X, To.Y, 0.f));
+	if (Distance > Attack.Radius + TargetRadius || FMath::Abs(TargetLocation.Z - To.Z) > TargetHalfHeight + Attack.Radius)
+	{
+		return false;
+	}
+
+	// Off the charge line, to the side the target is on.
+	const FVector Side = FVector::CrossProduct(FVector::UpVector, ChargeDirection);
+	const float SideSign = FVector::DotProduct(TargetLocation - Owner->GetActorLocation(), Side) >= 0.f ? 1.f : -1.f;
+	ApplyHit(Attack, *Target, Side * SideSign);
+	return true;
+}
+
+void UEnemyAttackComponent::EndCharge()
+{
+	if (bCharging)
+	{
+		// The timer can end the charge before a tick has checked its last stretch.
+		if (Attacks.IsValidIndex(CurrentAttackIndex))
+		{
+			CheckChargeHit(Attacks[CurrentAttackIndex]);
+		}
+		bCharging = false;
+		if (ACharacter* Owner = Cast<ACharacter>(GetOwner()))
+		{
+			Owner->GetCharacterMovement()->RemoveRootMotionSourceByID(ChargeRootMotionID);
+			Owner->GetCharacterMovement()->StopMovementImmediately();
+		}
+	}
+	SetComponentTickEnabled(false);
+	BeginRecovery();
+}
+
 void UEnemyAttackComponent::FaceTarget(float MaxYawDelta)
 {
 	AActor* Owner = GetOwner();
@@ -313,10 +432,15 @@ void UEnemyAttackComponent::FaceTarget(float MaxYawDelta)
 void UEnemyAttackComponent::CancelAttack()
 {
 	SetComponentTickEnabled(false);
-	if (AActor* Owner = GetOwner())
+	if (ACharacter* Owner = Cast<ACharacter>(GetOwner()))
 	{
 		Owner->GetWorldTimerManager().ClearTimer(AttackTimer);
+		if (bCharging)
+		{
+			Owner->GetCharacterMovement()->RemoveRootMotionSourceByID(ChargeRootMotionID);
+		}
 	}
+	bCharging = false;
 	if (bAttacking)
 	{
 		StopAttackAnimation();
@@ -341,53 +465,65 @@ void UEnemyAttackComponent::Strike()
 	SetComponentTickEnabled(false);
 
 	AActor* Target = CurrentTarget.Get();
-	if (Owner && Target && Attacks.IsValidIndex(CurrentAttackIndex))
+	if (!Owner || !Target || !Attacks.IsValidIndex(CurrentAttackIndex))
 	{
-		const FEnemyAttack& Attack = Attacks[CurrentAttackIndex];
-
-		if (Attack.IsRanged())
-		{
-			FireProjectile(Attack, *Target);
-		}
-		else
-		{
-			// Hit if the target's capsule touches the hit sphere (2D) and it is roughly at the same height.
-			const FVector Center = Owner->GetActorLocation() + Owner->GetActorForwardVector() * Attack.Reach;
-			float TargetRadius = 0.f;
-			float TargetHalfHeight = 0.f;
-			Target->GetSimpleCollisionCylinder(TargetRadius, TargetHalfHeight);
-			const FVector Delta = Target->GetActorLocation() - Center;
-			if (Delta.Size2D() <= Attack.Radius + TargetRadius && FMath::Abs(Delta.Z) <= TargetHalfHeight + Attack.Radius)
-			{
-				const APawn* Pawn = Cast<APawn>(Owner);
-				UGameplayStatics::ApplyDamage(Target, Attack.Damage, Pawn ? Pawn->GetController() : nullptr, Owner, nullptr);
-
-				UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
-				if (TargetASC && TargetASC->HasAttributeSetForAttribute(UCombatAttributeSet::GetPoiseDamageAttribute()))
-				{
-					UCombatAttributeSet::ApplyDamage(TargetASC, 0.f, Attack.PoiseDamage, Owner);
-				}
-
-				if (UHitReactionComponent* HitReaction = Target->FindComponentByClass<UHitReactionComponent>())
-				{
-					const FVector Direction = (Target->GetActorLocation() - Owner->GetActorLocation()).GetSafeNormal2D();
-					HitReaction->ApplyKnockback(Direction * Attack.Knockback);
-					HitReaction->ApplyStun(Attack.StunDuration);
-				}
-			}
-		}
-
-		const double RecoveryEnd = GetWorld()->GetTimeSeconds() + Attack.RecoveryTime;
-		ReadyTimes.SetNumZeroed(Attacks.Num());
-		ReadyTimes[CurrentAttackIndex] = RecoveryEnd + Attack.Cooldown;
-		SharedReadyTime = RecoveryEnd + SharedCooldown;
-
-		bRecovering = true;
-		Owner->GetWorldTimerManager().SetTimer(AttackTimer, this, &UEnemyAttackComponent::FinishAttack, FMath::Max(Attack.RecoveryTime, KINDA_SMALL_NUMBER), false);
+		FinishAttack();
 		return;
 	}
 
-	FinishAttack();
+	const FEnemyAttack& Attack = Attacks[CurrentAttackIndex];
+	if (Attack.IsCharge())
+	{
+		// Recovery starts when the charge ends.
+		StartCharge(Attack, *Target);
+		return;
+	}
+
+	if (Attack.IsRanged())
+	{
+		FireProjectile(Attack, *Target);
+	}
+	else if (IsTouchingSphere(*Target, Owner->GetActorLocation() + Owner->GetActorForwardVector() * Attack.Reach, Attack.Radius))
+	{
+		ApplyHit(Attack, *Target, (Target->GetActorLocation() - Owner->GetActorLocation()).GetSafeNormal2D());
+	}
+	BeginRecovery();
+}
+
+void UEnemyAttackComponent::ApplyHit(const FEnemyAttack& Attack, AActor& Target, const FVector& KnockbackDirection)
+{
+	AActor* Owner = GetOwner();
+	const APawn* Pawn = Cast<APawn>(Owner);
+	UGameplayStatics::ApplyDamage(&Target, Attack.Damage, Pawn ? Pawn->GetController() : nullptr, Owner, nullptr);
+
+	UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(&Target);
+	if (TargetASC && TargetASC->HasAttributeSetForAttribute(UCombatAttributeSet::GetPoiseDamageAttribute()))
+	{
+		UCombatAttributeSet::ApplyDamage(TargetASC, 0.f, Attack.PoiseDamage, Owner);
+	}
+
+	if (UHitReactionComponent* HitReaction = Target.FindComponentByClass<UHitReactionComponent>())
+	{
+		HitReaction->ApplyKnockback(KnockbackDirection * Attack.Knockback);
+		HitReaction->ApplyStun(Attack.StunDuration);
+	}
+}
+
+void UEnemyAttackComponent::BeginRecovery()
+{
+	if (!Attacks.IsValidIndex(CurrentAttackIndex))
+	{
+		FinishAttack();
+		return;
+	}
+	const FEnemyAttack& Attack = Attacks[CurrentAttackIndex];
+	const double RecoveryEnd = GetWorld()->GetTimeSeconds() + Attack.RecoveryTime;
+	ReadyTimes.SetNumZeroed(Attacks.Num());
+	ReadyTimes[CurrentAttackIndex] = RecoveryEnd + Attack.Cooldown;
+	SharedReadyTime = RecoveryEnd + SharedCooldown;
+
+	bRecovering = true;
+	GetOwner()->GetWorldTimerManager().SetTimer(AttackTimer, this, &UEnemyAttackComponent::FinishAttack, FMath::Max(Attack.RecoveryTime, KINDA_SMALL_NUMBER), false);
 }
 
 void UEnemyAttackComponent::FinishAttack()

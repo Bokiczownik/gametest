@@ -8,7 +8,7 @@ class AEnemyProjectile;
 class UAnimSequenceBase;
 class UPrimitiveComponent;
 
-/** One telegraphed enemy attack: melee (hit sphere) or ranged (Projectile). */
+/** One telegraphed enemy attack: melee (hit sphere), ranged (Projectile) or charge (ChargeSpeed). */
 USTRUCT(BlueprintType)
 struct FEnemyAttack
 {
@@ -87,8 +87,17 @@ struct FEnemyAttack
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Ranged", meta = (ClampMin = "0"))
 	float BackstepDistance = 0.f;
 
+	/**
+	 * > 0 = charge: at the strike the owner rushes along its facing at this speed (cm/s) up to Reach, ending just past the
+	 * target's position at the strike (walls stop it). The first time the target touches the Radius sphere in front of
+	 * the owner it is hit and knocked sideways off the charge line; then the charge ends and RecoveryTime follows.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Charge", meta = (ClampMin = "0"))
+	float ChargeSpeed = 0.f;
+
 	float GetRange() const { return Reach + Radius; }
 	bool IsRanged() const;
+	bool IsCharge() const { return ChargeSpeed > 0.f; }
 };
 
 /**
@@ -101,6 +110,8 @@ struct FEnemyAttack
  * The telegraph is scaled to Radius (engine Cylinder: 100 cm wide at scale 1).
  * Ranged attacks (FEnemyAttack::Projectile) show a lane that grows from the owner toward the target during the windup
  * (the component ticks) and fire the projectile at the strike; the optional backstep hops away first.
+ * Charge attacks (FEnemyAttack::ChargeSpeed) show the same lane, then move the owner with a constant-force root motion
+ * source and hit the target on contact (the component ticks during the charge).
  */
 UCLASS(ClassGroup = (Gameplay), meta = (BlueprintSpawnableComponent))
 class NOWAPROBA_API UEnemyAttackComponent : public UActorComponent
@@ -137,6 +148,13 @@ public:
 	/** True while the owner must stay in place: windup and strike, and the recovery unless bMoveDuringRecovery. */
 	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
 	bool IsHoldingPosition() const { return bAttacking && !(bRecovering && bMoveDuringRecovery); }
+
+	/** True if no attack is running and the attack called Name exists and is off cooldown (range not checked). */
+	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
+	bool CanStartNamedAttack(FName Name) const;
+
+	/** The attack called Name, or null. */
+	const FEnemyAttack* FindAttack(FName Name) const;
 
 	/** True if StartAttack(Target) would start an attack now (none running, one off cooldown covers the 2D distance). */
 	UFUNCTION(BlueprintPure, Category = "Enemy Attack")
@@ -198,16 +216,26 @@ private:
 	bool bRecovering = false;
 	TArray<double> ReadyTimes;
 	double SharedReadyTime = 0.0;
+	bool bCharging = false;
+	uint16 ChargeRootMotionID = 0;
+	FVector ChargeDirection = FVector::ForwardVector;
+	FVector ChargeCheckedLocation = FVector::ZeroVector;
 
 	bool IsAttackReady(int32 AttackIndex) const;
 	int32 PickAttack(float Distance) const;
 	void BeginAttack(AActor* Target, int32 AttackIndex);
 	void Strike();
+	void BeginRecovery();
 	void FinishAttack();
+	void ApplyHit(const FEnemyAttack& Attack, AActor& Target, const FVector& KnockbackDirection);
+	void StartCharge(const FEnemyAttack& Attack, const AActor& Target);
+	/** Hits the target if the front of the owner passed it since the last check. */
+	bool CheckChargeHit(const FEnemyAttack& Attack);
+	void EndCharge();
 	void SetTelegraphVisible(bool bVisible);
 	void StopAttackAnimation();
 	void FaceTarget(float MaxYawDelta);
-	void UpdateRangedTelegraph(const FEnemyAttack& Attack);
+	void UpdateLaneTelegraph(const FEnemyAttack& Attack);
 	void FireProjectile(const FEnemyAttack& Attack, const AActor& Target);
 	void TryBackstep(float Distance);
 };

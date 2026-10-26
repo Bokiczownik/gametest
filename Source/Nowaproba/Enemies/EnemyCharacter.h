@@ -145,6 +145,30 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Flank", meta = (ClampMin = "0.5", EditCondition = "bFlank"))
 	float FlankTimeout = 3.f;
 
+	/**
+	 * Bodyguard: while a chasing ranged ally (AEnemyRangedAIController, same AggroGroup) is within BodyguardRadius, it
+	 * does not chase the player but stands GuardDistance in front of that ally on the line to the player, facing the
+	 * player (several bodyguards split over the allies nearest the player). It only uses GuardShoveAttack when the player
+	 * is in its reach and GuardChargeAttack when the player got past it and stands between it and the ally.
+	 * Without such an ally it fights normally.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Bodyguard")
+	bool bBodyguard = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Bodyguard", meta = (ClampMin = "0", EditCondition = "bBodyguard"))
+	float BodyguardRadius = 1500.f;
+
+	/** Distance from the guarded ally toward the player (at most half the way to the player). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Bodyguard", meta = (ClampMin = "0", EditCondition = "bBodyguard"))
+	float GuardDistance = 350.f;
+
+	/** Attack names (FEnemyAttack::Name, usually Weight 0 so the normal fight never picks them). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Bodyguard", meta = (EditCondition = "bBodyguard"))
+	FName GuardShoveAttack = TEXT("GuardShove");
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Bodyguard", meta = (EditCondition = "bBodyguard"))
+	FName GuardChargeAttack = TEXT("ShieldCharge");
+
 	/** True while the AI runs at the player or is within reach to attack. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Enemy")
 	bool bInCombat = false;

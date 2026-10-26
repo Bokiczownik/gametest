@@ -2,9 +2,11 @@
 
 #include "EnemyAttackComponent.h"
 #include "EnemyCharacter.h"
+#include "EnemyRangedAIController.h"
 #include "FogHunterSpawner.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "NavigationSystem.h"
@@ -178,6 +180,16 @@ void AEnemyAIController::UpdateCombat(APawn* Player, float Distance)
 	AEnemyCharacter* Self = Enemy.Get();
 	UEnemyAttackComponent* Attack = Self->GetAttack();
 
+	if (Self->bBodyguard)
+	{
+		if (const AEnemyCharacter* Ward = FindWard(Player))
+		{
+			UpdateBodyguard(Player, Distance, *Ward);
+			return;
+		}
+		SetGuarding(false);
+	}
+
 	// Weapon raised only while running at the player or about to attack, not while stuck (e.g. no path yet).
 	Self->SetInCombat(Distance <= Attack->GetAttackRange() * 1.5f || Self->GetVelocity().Size2D() > 50.f);
 
@@ -289,6 +301,157 @@ bool AEnemyAIController::GetFlankPoint(const APawn* Player, float Distance, FVec
 	return true;
 }
 
+const AEnemyCharacter* AEnemyAIController::FindWard(const APawn* Player) const
+{
+	const AEnemyCharacter* Self = Enemy.Get();
+	const auto IsChasingAlly = [Self](const AEnemyCharacter* Other)
+	{
+		const AEnemyAIController* OtherAI = Cast<AEnemyAIController>(Other->GetController());
+		return !Other->IsDead() && OtherAI && OtherAI->IsChasing() && (Self->AggroGroup.IsNone() || Other->AggroGroup == Self->AggroGroup);
+	};
+
+	// Ranged allies nearest the player first, and the bodyguards that could take them.
+	const FVector PlayerLocation = Player->GetActorLocation();
+	TArray<const AEnemyCharacter*, TInlineAllocator<8>> Wards;
+	TArray<const AEnemyCharacter*, TInlineAllocator<8>> Guards;
+	for (TActorIterator<AEnemyCharacter> It(GetWorld()); It; ++It)
+	{
+		if (!IsChasingAlly(*It))
+		{
+			continue;
+		}
+		if (Cast<AEnemyRangedAIController>(It->GetController()))
+		{
+			if (FVector::Dist2D(It->GetActorLocation(), Self->GetActorLocation()) <= Self->BodyguardRadius)
+			{
+				Wards.Add(*It);
+			}
+		}
+		else if (It->bBodyguard)
+		{
+			Guards.Add(*It);
+		}
+	}
+	if (Wards.Num() == 0)
+	{
+		return nullptr;
+	}
+	Wards.Sort([&PlayerLocation](const AEnemyCharacter& A, const AEnemyCharacter& B)
+	{
+		return FVector::DistSquared2D(A.GetActorLocation(), PlayerLocation) < FVector::DistSquared2D(B.GetActorLocation(), PlayerLocation);
+	});
+
+	// Each ward in turn takes the nearest free bodyguard; with more bodyguards than wards the rounds repeat.
+	while (Guards.Num() > 0)
+	{
+		const int32 GuardsBefore = Guards.Num();
+		for (const AEnemyCharacter* Ward : Wards)
+		{
+			int32 Nearest = INDEX_NONE;
+			for (int32 i = 0; i < Guards.Num(); ++i)
+			{
+				const float DistSq = FVector::DistSquared2D(Guards[i]->GetActorLocation(), Ward->GetActorLocation());
+				if (DistSq <= FMath::Square(Guards[i]->BodyguardRadius)
+					&& (Nearest == INDEX_NONE || DistSq < FVector::DistSquared2D(Guards[Nearest]->GetActorLocation(), Ward->GetActorLocation())))
+				{
+					Nearest = i;
+				}
+			}
+			if (Nearest != INDEX_NONE)
+			{
+				if (Guards[Nearest] == Self)
+				{
+					return Ward;
+				}
+				Guards.RemoveAtSwap(Nearest);
+			}
+		}
+		if (Guards.Num() == GuardsBefore)
+		{
+			break;
+		}
+	}
+	return Wards[0];
+}
+
+void AEnemyAIController::UpdateBodyguard(APawn* Player, float Distance, const AEnemyCharacter& Ward)
+{
+	AEnemyCharacter* Self = Enemy.Get();
+	UEnemyAttackComponent* Attack = Self->GetAttack();
+	Self->SetInCombat(true);
+	SetGuarding(true);
+
+	const FVector SelfLocation = Self->GetActorLocation();
+	const FVector PlayerLocation = Player->GetActorLocation();
+	const FVector WardLocation = Ward.GetActorLocation();
+
+	// The player got past: it stands on the line from this guard to the ward, within the charge's reach.
+	const FEnemyAttack* Charge = Attack->FindAttack(Self->GuardChargeAttack);
+	if (Charge && Attack->CanStartNamedAttack(Self->GuardChargeAttack) && Distance <= Charge->Reach)
+	{
+		const FVector ToWard = (WardLocation - SelfLocation).GetSafeNormal2D();
+		const float Along = FVector::DotProduct(PlayerLocation - SelfLocation, ToWard);
+		const float Lateral = FMath::PointDistToSegment(FVector(PlayerLocation.X, PlayerLocation.Y, 0.f),
+			FVector(SelfLocation.X, SelfLocation.Y, 0.f), FVector(WardLocation.X, WardLocation.Y, 0.f));
+		if (Along > 0.f && Along < FVector::Dist2D(SelfLocation, WardLocation) && Lateral <= Charge->Radius)
+		{
+			// No focus: the controller would keep turning the guard toward the player during the charge.
+			StopMovement();
+			ClearFocus(EAIFocusPriority::Gameplay);
+			Attack->StartNamedAttack(Player, Self->GuardChargeAttack);
+			return;
+		}
+	}
+
+	const FEnemyAttack* Shove = Attack->FindAttack(Self->GuardShoveAttack);
+	if (Shove && Distance <= Shove->GetRange() && Attack->CanStartNamedAttack(Self->GuardShoveAttack))
+	{
+		StopMovement();
+		Attack->StartNamedAttack(Player, Self->GuardShoveAttack);
+		return;
+	}
+
+	if (GetFocusActor() != Player)
+	{
+		SetFocus(Player);
+	}
+
+	// Between the ward and the player, close to the ward: little ground to cover when the player circles.
+	const FVector WardToPlayer = PlayerLocation - WardLocation;
+	const float WardToPlayerDist = WardToPlayer.Size2D();
+	const FVector Post = WardLocation + WardToPlayer.GetSafeNormal2D() * FMath::Min(Self->GuardDistance, WardToPlayerDist * 0.5f);
+
+	const UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+	FNavLocation PostNav;
+	if (NavSys && NavSys->ProjectPointToNavigation(Post, PostNav))
+	{
+		if (FVector::Dist2D(SelfLocation, PostNav.Location) > ArriveDistance * 0.5f)
+		{
+			MoveToLocation(PostNav.Location, ArriveDistance * 0.25f);
+		}
+	}
+}
+
+void AEnemyAIController::SetGuarding(bool bNewGuarding)
+{
+	if (bGuarding == bNewGuarding)
+	{
+		return;
+	}
+	bGuarding = bNewGuarding;
+	if (!bGuarding)
+	{
+		ClearFocus(EAIFocusPriority::Gameplay);
+	}
+	// Guarding: faces the focus (player) while side-stepping; otherwise faces the walk direction.
+	if (AEnemyCharacter* Self = Enemy.Get())
+	{
+		UCharacterMovementComponent* Movement = Self->GetCharacterMovement();
+		Movement->bOrientRotationToMovement = !bGuarding;
+		Movement->bUseControllerDesiredRotation = bGuarding;
+	}
+}
+
 bool AEnemyAIController::CanSee(const APawn* Player) const
 {
 	const AEnemyCharacter* Self = Enemy.Get();
@@ -338,6 +501,10 @@ void AEnemyAIController::SetChasing(bool bNewChasing)
 	}
 	bChasing = bNewChasing;
 	StopMovement();
+	if (!bChasing)
+	{
+		SetGuarding(false);
+	}
 	PatrolWaitEnd = -1.0;
 	if (AEnemyCharacter* Self = Enemy.Get())
 	{
@@ -409,6 +576,7 @@ void AEnemyAIController::StopChase()
 		StopMovement();
 	}
 	bChasing = false;
+	SetGuarding(false);
 	if (bWasChasing)
 	{
 		OnChaseChanged(false);
