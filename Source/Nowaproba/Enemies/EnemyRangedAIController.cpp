@@ -6,6 +6,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "NavigationPath.h"
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
 
@@ -16,6 +17,10 @@ namespace
 
 	/** Moves end this far short of a navmesh edge hit. */
 	constexpr float RangedWallMargin = 40.f;
+
+	/** Firing spots sampled around the player when no nearby move has a shot, and how many of the nearest get a path query. */
+	constexpr int32 RangedFiringSpotSamples = 12;
+	constexpr int32 RangedFiringSpotPathChecks = 4;
 
 	float DistToSegment2D(const FVector& Point, const FVector& A, const FVector& B)
 	{
@@ -205,10 +210,55 @@ void AEnemyRangedAIController::Reposition(const APawn* Player)
 		}
 	}
 
+	// No shot from anywhere nearby (e.g. behind a long wall): walk the navmesh path to a firing spot around the player.
+	FVector FiringSpot;
+	if (!HasClearShot(Best + FVector(0.f, 0.f, ShotHeight), Player) && FindFiringSpot(Player, Start, ShotHeight, FiringSpot))
+	{
+		Best = FiringSpot;
+	}
+
 	if (Best != Start)
 	{
 		MoveGoal = Best;
 		SetFacePlayer(false);
 		MoveToLocation(Best, 30.f);
 	}
+}
+
+bool AEnemyRangedAIController::FindFiringSpot(const APawn* Player, const FVector& Start, float ShotHeight, FVector& OutSpot) const
+{
+	UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+	if (!NavSys)
+	{
+		return false;
+	}
+
+	// Spots in the preferred band around the player that have a shot, nearest (straight line) first.
+	const FVector PlayerFeet = Player->GetNavAgentLocation();
+	TArray<FVector, TInlineAllocator<RangedFiringSpotSamples>> Spots;
+	const float AngleOffset = FMath::FRandRange(0.f, 360.f);
+	for (int32 i = 0; i < RangedFiringSpotSamples; ++i)
+	{
+		const FVector Direction = FVector::ForwardVector.RotateAngleAxis(AngleOffset + 360.f * i / RangedFiringSpotSamples, FVector::UpVector);
+		FNavLocation SpotNav;
+		if (NavSys->ProjectPointToNavigation(PlayerFeet + Direction * FMath::FRandRange(MinDistance, FMath::Max(MinDistance, MaxDistance)), SpotNav)
+			&& HasClearShot(SpotNav.Location + FVector(0.f, 0.f, ShotHeight), Player))
+		{
+			Spots.Add(SpotNav.Location);
+		}
+	}
+	Spots.Sort([&Start](const FVector& A, const FVector& B) { return FVector::DistSquared2D(A, Start) < FVector::DistSquared2D(B, Start); });
+
+	// Of the nearest few, take the one with the shortest complete path.
+	float BestLength = TNumericLimits<float>::Max();
+	for (int32 i = 0; i < FMath::Min(Spots.Num(), RangedFiringSpotPathChecks); ++i)
+	{
+		const UNavigationPath* Path = UNavigationSystemV1::FindPathToLocationSynchronously(GetWorld(), Start, Spots[i], GetPawn());
+		if (Path && Path->IsValid() && !Path->IsPartial() && Path->GetPathLength() < BestLength)
+		{
+			BestLength = Path->GetPathLength();
+			OutSpot = Spots[i];
+		}
+	}
+	return BestLength < TNumericLimits<float>::Max();
 }

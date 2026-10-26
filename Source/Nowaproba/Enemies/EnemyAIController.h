@@ -13,12 +13,20 @@ class AEnemyCharacter;
  * Patrol walks the route in a loop with a pause at each point, Guard returns to its post and faces the spawn direction
  * (and only engages while the player is within GuardRadius of the post), FogHunter needs no sight or range check, chases
  * while its spawner's IsInHuntArea allows it and otherwise walks back to its spawn point in the fog.
+ * Damage or a group alert (same AggroGroup) alerts it and provokes it for ProvokedDuration (from the last hit / alert):
+ * it then keeps chasing regardless of LoseAggroRange, GuardRadius and the hunt area. A chasing member that fights on its
+ * own account (was hit, or the player is inside its own area and AggroRange) alerts its group every second, so the
+ * group fights as long as one member does; members kept only by alerts do not renew them.
  * Stops when the enemy or the player is dead.
  */
 UCLASS()
 class NOWAPROBA_API AEnemyAIController : public AAIController
 {
 	GENERATED_BODY()
+
+public:
+	/** Group alert: notice the player on the next update (no sight check) and keep fighting for ProvokedDuration. */
+	void Alert();
 
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
@@ -48,10 +56,18 @@ private:
 	float LastHealth = 0.f;
 	int32 PatrolIndex = 0;
 	double PatrolWaitEnd = -1.0;
+	double ProvokedUntil = -1.0;
+	double GroupAlertUntil = -1.0;
+	double NextGroupAlertTime = 0.0;
 
 	void UpdateBehaviour();
+	bool IsProvoked() const;
+	void Provoke();
+	void AlertGroup();
+	bool IsEngagedOnOwn(const APawn* Player, float Distance) const;
 	bool CanSee(const APawn* Player) const;
 	bool CanEngage(const APawn* Player) const;
+	bool CanEngageOnOwn(const APawn* Player) const;
 	void SetChasing(bool bNewChasing);
 	void UpdatePatrol();
 	void ReturnHome();

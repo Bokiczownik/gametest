@@ -13,7 +13,8 @@
  * raycasts, so it never runs into walls) and walks to the best one. Score: distance to the player near a preferred
  * distance re-rolled each pick within [MinDistance, MaxDistance] (no fixed ring), clear shot, a melee ally between the
  * spot and the player (cover), how much free navmesh lies behind and beside the spot (corners and wall hugging score
- * low), no path past the player, short moves.
+ * low), no path past the player, short moves. If no nearby spot has a shot (e.g. behind a long wall) it follows the
+ * navmesh path to the reachable firing spot around the player with the shortest path.
  */
 UCLASS()
 class NOWAPROBA_API AEnemyRangedAIController : public AEnemyAIController
@@ -77,4 +78,5 @@ private:
 	void SetFacePlayer(bool bFace);
 	bool HasClearShot(const FVector& From, const APawn* Player) const;
 	void Reposition(const APawn* Player);
+	bool FindFiringSpot(const APawn* Player, const FVector& Start, float ShotHeight, FVector& OutSpot) const;
 };

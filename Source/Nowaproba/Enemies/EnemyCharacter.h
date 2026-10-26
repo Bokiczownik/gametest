@@ -91,6 +91,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy", meta = (ClampMin = "0"))
 	float LoseAggroRange = 2000.f;
 
+	/** Enemies with the same group (None = no group) start fighting together: when one engages the player, the others are alerted (and provoked). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy")
+	FName AggroGroup;
+
+	/** After taking damage or a group alert the enemy keeps fighting this long, even beyond LoseAggroRange, its GuardRadius or the fog hunt area (s). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy", meta = (ClampMin = "0"))
+	float ProvokedDuration = 8.f;
+
 	/** Half angle of the view cone for noticing the player (180 = all around). Taking damage always alerts. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy", meta = (ClampMin = "1", ClampMax = "180"))
 	float SightHalfAngle = 180.f;

@@ -4,11 +4,18 @@
 #include "EnemyCharacter.h"
 #include "FogHunterSpawner.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "TimerManager.h"
 #include "../Combat/HitReactionComponent.h"
 #include "../Health/HealthComponent.h"
+
+namespace
+{
+	/** How often a group member fighting on its own account renews the group alert (s). */
+	constexpr double GroupAlertInterval = 1.0;
+}
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
 {
@@ -42,8 +49,60 @@ void AEnemyAIController::HandleHealthChanged(float CurrentHealth, float MaxHealt
 	if (CurrentHealth < LastHealth)
 	{
 		bAlerted = true;
+		Provoke();
 	}
 	LastHealth = CurrentHealth;
+}
+
+void AEnemyAIController::Alert()
+{
+	bAlerted = true;
+	if (const AEnemyCharacter* Self = Enemy.Get())
+	{
+		GroupAlertUntil = GetWorld()->GetTimeSeconds() + Self->ProvokedDuration;
+	}
+}
+
+void AEnemyAIController::Provoke()
+{
+	if (const AEnemyCharacter* Self = Enemy.Get())
+	{
+		ProvokedUntil = GetWorld()->GetTimeSeconds() + Self->ProvokedDuration;
+	}
+}
+
+bool AEnemyAIController::IsProvoked() const
+{
+	const double Now = GetWorld()->GetTimeSeconds();
+	return Now < ProvokedUntil || Now < GroupAlertUntil;
+}
+
+bool AEnemyAIController::IsEngagedOnOwn(const APawn* Player, float Distance) const
+{
+	// Hit, or the player is within its AggroRange and its own area: not kept in the fight only by the group's alerts
+	// (LoseAggroRange would let alerted members that ran after the player keep renewing each other).
+	const AEnemyCharacter* Self = Enemy.Get();
+	return GetWorld()->GetTimeSeconds() < ProvokedUntil
+		|| (CanEngageOnOwn(Player) && (Self->Behaviour == EEnemyBehaviour::FogHunter || Distance <= Self->AggroRange));
+}
+
+void AEnemyAIController::AlertGroup()
+{
+	const AEnemyCharacter* Self = Enemy.Get();
+	if (!Self || Self->AggroGroup.IsNone())
+	{
+		return;
+	}
+	for (TActorIterator<AEnemyCharacter> It(GetWorld()); It; ++It)
+	{
+		if (*It != Self && It->AggroGroup == Self->AggroGroup && !It->IsDead())
+		{
+			if (AEnemyAIController* MemberAI = Cast<AEnemyAIController>(It->GetController()))
+			{
+				MemberAI->Alert();
+			}
+		}
+	}
 }
 
 void AEnemyAIController::UpdateBehaviour()
@@ -67,6 +126,17 @@ void AEnemyAIController::UpdateBehaviour()
 		return;
 	}
 
+	// 2D like the attack's own range and hit tests: capsule centres of differently sized pawns sit at different heights.
+	const float Distance = FVector::Dist2D(Self->GetActorLocation(), Player->GetActorLocation());
+
+	// A member fighting on its own account keeps its group in the fight (also while attacking or blocking).
+	const double Now = GetWorld()->GetTimeSeconds();
+	if (bChasing && Now >= NextGroupAlertTime && IsEngagedOnOwn(Player, Distance))
+	{
+		NextGroupAlertTime = Now + GroupAlertInterval;
+		AlertGroup();
+	}
+
 	UEnemyAttackComponent* Attack = Self->GetAttack();
 	if (Attack->IsHoldingPosition() || Self->IsActionLocked() || Self->GetHitReaction()->IsStaggered() || Self->GetHitReaction()->IsStunned())
 	{
@@ -74,8 +144,6 @@ void AEnemyAIController::UpdateBehaviour()
 	}
 
 	const bool bHunter = Self->Behaviour == EEnemyBehaviour::FogHunter;
-	// 2D like the attack's own range and hit tests: capsule centres of differently sized pawns sit at different heights.
-	const float Distance = FVector::Dist2D(Self->GetActorLocation(), Player->GetActorLocation());
 	if (!bChasing)
 	{
 		if ((bHunter || bAlerted || CanSee(Player)) && CanEngage(Player))
@@ -83,7 +151,7 @@ void AEnemyAIController::UpdateBehaviour()
 			SetChasing(true);
 		}
 	}
-	else if ((!bHunter && Distance > Self->LoseAggroRange) || !CanEngage(Player))
+	else if ((!bHunter && Distance > Self->LoseAggroRange && !IsProvoked()) || !CanEngage(Player))
 	{
 		SetChasing(false);
 	}
@@ -149,6 +217,11 @@ bool AEnemyAIController::CanSee(const APawn* Player) const
 
 bool AEnemyAIController::CanEngage(const APawn* Player) const
 {
+	return IsProvoked() || CanEngageOnOwn(Player);
+}
+
+bool AEnemyAIController::CanEngageOnOwn(const APawn* Player) const
+{
 	const AEnemyCharacter* Self = Enemy.Get();
 	switch (Self->Behaviour)
 	{
@@ -178,6 +251,7 @@ void AEnemyAIController::SetChasing(bool bNewChasing)
 		Self->SetChaseSpeed(bChasing || Self->Behaviour == EEnemyBehaviour::Chase);
 		Self->SetInCombat(bChasing);
 	}
+	NextGroupAlertTime = 0.0;
 	OnChaseChanged(bChasing);
 }
 
