@@ -127,6 +127,24 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Guard", meta = (ClampMin = "0", EditCondition = "Behaviour == EEnemyBehaviour::Guard"))
 	float GuardRadius = 800.f;
 
+	/**
+	 * Melee flanker: while 2+ chasing flankers are within FlankRadius of the player they spread evenly around it
+	 * (2 = opposite sides, 3 = 120 deg apart; slots relative to each other, not to the player's facing). It still attacks
+	 * as soon as the player is in reach and gives up circling after FlankTimeout (approaches directly as long again).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Flank")
+	bool bFlank = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Flank", meta = (ClampMin = "0", EditCondition = "bFlank"))
+	float FlankRadius = 800.f;
+
+	/** Within this many degrees of its slot it closes in directly. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Flank", meta = (ClampMin = "0", ClampMax = "90", EditCondition = "bFlank"))
+	float FlankTolerance = 30.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Flank", meta = (ClampMin = "0.5", EditCondition = "bFlank"))
+	float FlankTimeout = 3.f;
+
 	/** True while the AI runs at the player or is within reach to attack. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Enemy")
 	bool bInCombat = false;

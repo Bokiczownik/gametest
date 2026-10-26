@@ -7,6 +7,7 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "NavigationSystem.h"
 #include "TimerManager.h"
 #include "../Combat/HitReactionComponent.h"
 #include "../Health/HealthComponent.h"
@@ -192,8 +193,100 @@ void AEnemyAIController::UpdateCombat(APawn* Player, float Distance)
 		Self->UpdateHunterChaseSpeed(Distance);
 	}
 
+	FVector FlankPoint;
+	if (Self->bFlank && GetFlankPoint(Player, Distance, FlankPoint))
+	{
+		MoveToLocation(FlankPoint, 30.f);
+		return;
+	}
+
 	// Stop a bit inside the attack range so the next update can attack.
 	MoveToActor(Player, Attack->GetAttackRange() * 0.6f);
+}
+
+bool AEnemyAIController::GetFlankPoint(const APawn* Player, float Distance, FVector& OutPoint)
+{
+	AEnemyCharacter* Self = Enemy.Get();
+	const double Now = GetWorld()->GetTimeSeconds();
+	if (Now < FlankResumeTime || Distance > Self->FlankRadius)
+	{
+		FlankStartTime = -1.0;
+		return false;
+	}
+
+	// Chasing flankers near the player, ordered by their angle around it.
+	const FVector PlayerLocation = Player->GetActorLocation();
+	const auto AngleAround = [&PlayerLocation](const AActor* Actor)
+	{
+		const FVector Offset = Actor->GetActorLocation() - PlayerLocation;
+		return FMath::RadiansToDegrees(FMath::Atan2(Offset.Y, Offset.X));
+	};
+	TArray<TPair<float, const AEnemyCharacter*>, TInlineAllocator<8>> Members;
+	for (TActorIterator<AEnemyCharacter> It(GetWorld()); It; ++It)
+	{
+		const AEnemyAIController* MemberAI = Cast<AEnemyAIController>(It->GetController());
+		if (It->bFlank && !It->IsDead() && MemberAI && MemberAI->IsChasing()
+			&& FVector::Dist2D(It->GetActorLocation(), PlayerLocation) <= It->FlankRadius)
+		{
+			Members.Emplace(AngleAround(*It), *It);
+		}
+	}
+	const int32 SelfIndex = Members.IndexOfByPredicate([Self](const TPair<float, const AEnemyCharacter*>& Member) { return Member.Value == Self; });
+	if (Members.Num() < 2 || SelfIndex == INDEX_NONE)
+	{
+		FlankStartTime = -1.0;
+		return false;
+	}
+	Members.Sort([](const TPair<float, const AEnemyCharacter*>& A, const TPair<float, const AEnemyCharacter*>& B) { return A.Key < B.Key; });
+
+	// Evenly spaced slots in the members' current order, rotated to stay closest to where they stand (circular mean).
+	const float SlotStep = 360.f / Members.Num();
+	FVector2D Sum = FVector2D::ZeroVector;
+	int32 MyIndex = 0;
+	for (int32 i = 0; i < Members.Num(); ++i)
+	{
+		const float Offset = FMath::DegreesToRadians(Members[i].Key - i * SlotStep);
+		Sum += FVector2D(FMath::Cos(Offset), FMath::Sin(Offset));
+		if (Members[i].Value == Self)
+		{
+			MyIndex = i;
+		}
+	}
+	const float MyAngle = Members[MyIndex].Key;
+	const float SlotAngle = FMath::RadiansToDegrees(FMath::Atan2(Sum.Y, Sum.X)) + MyIndex * SlotStep;
+	const float Delta = FMath::FindDeltaAngleDegrees(MyAngle, SlotAngle);
+	if (FMath::Abs(Delta) <= Self->FlankTolerance)
+	{
+		FlankStartTime = -1.0;
+		return false;
+	}
+
+	// Circling too long (e.g. the player keeps turning with it): approach directly for a while.
+	if (FlankStartTime < 0.0)
+	{
+		FlankStartTime = Now;
+	}
+	else if (Now - FlankStartTime > Self->FlankTimeout)
+	{
+		FlankStartTime = -1.0;
+		FlankResumeTime = Now + Self->FlankTimeout;
+		return false;
+	}
+
+	// Walk around the player just outside its reach, at most 60 deg per step; farther ones close in while circling.
+	const float AttackRange = Self->GetAttack()->GetAttackRange();
+	const float Radius = FMath::Clamp(Distance, AttackRange + 60.f, AttackRange + 250.f);
+	const float StepAngle = FMath::DegreesToRadians(MyAngle + FMath::Clamp(Delta, -60.f, 60.f));
+	const FVector Point = FVector(PlayerLocation.X + FMath::Cos(StepAngle) * Radius, PlayerLocation.Y + FMath::Sin(StepAngle) * Radius, Self->GetNavAgentLocation().Z);
+
+	const UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+	FNavLocation PointNav;
+	if (!NavSys || !NavSys->ProjectPointToNavigation(Point, PointNav))
+	{
+		return false;
+	}
+	OutPoint = PointNav.Location;
+	return true;
 }
 
 bool AEnemyAIController::CanSee(const APawn* Player) const

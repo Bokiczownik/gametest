@@ -28,6 +28,8 @@ public:
 	/** Group alert: notice the player on the next update (no sight check) and keep fighting for ProvokedDuration. */
 	void Alert();
 
+	bool IsChasing() const { return bChasing; }
+
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;
@@ -59,12 +61,15 @@ private:
 	double ProvokedUntil = -1.0;
 	double GroupAlertUntil = -1.0;
 	double NextGroupAlertTime = 0.0;
+	double FlankStartTime = -1.0;
+	double FlankResumeTime = 0.0;
 
 	void UpdateBehaviour();
 	bool IsProvoked() const;
 	void Provoke();
 	void AlertGroup();
 	bool IsEngagedOnOwn(const APawn* Player, float Distance) const;
+	bool GetFlankPoint(const APawn* Player, float Distance, FVector& OutPoint);
 	bool CanSee(const APawn* Player) const;
 	bool CanEngage(const APawn* Player) const;
 	bool CanEngageOnOwn(const APawn* Player) const;
