@@ -64,12 +64,19 @@ bool UBlockComponent::IsBlockingFrom(const FVector& SourceLocation) const
 
 void UBlockComponent::StartBlock(AActor* Target)
 {
+	StartBlockFor(Target, BlockDuration, BlockCooldown);
+}
+
+void UBlockComponent::StartBlockFor(AActor* Target, float Duration, float Cooldown)
+{
 	if (!CanBlock())
 	{
 		return;
 	}
 
 	bBlocking = true;
+	bBlockedHit = false;
+	CurrentCooldown = Cooldown;
 	BlockTarget = Target;
 	AbilitySystem->SetNumericAttributeBase(UCombatAttributeSet::GetBlockAttribute(), MaxBlock);
 	AbilitySystem->AddLooseGameplayTag(CombatTags::State_Blocking);
@@ -87,7 +94,7 @@ void UBlockComponent::StartBlock(AActor* Target)
 	}
 
 	SetComponentTickEnabled(Target != nullptr);
-	GetWorld()->GetTimerManager().SetTimer(BlockTimer, this, &UBlockComponent::CompleteBlock, BlockDuration);
+	GetWorld()->GetTimerManager().SetTimer(BlockTimer, this, &UBlockComponent::CompleteBlock, FMath::Max(Duration, 0.1f));
 }
 
 void UBlockComponent::StopBlock()
@@ -105,7 +112,15 @@ void UBlockComponent::CompleteBlock()
 
 void UBlockComponent::HandleBlockChanged(const FOnAttributeChangeData& Data)
 {
-	if (bBlocking && Data.NewValue <= 0.f)
+	if (!bBlocking)
+	{
+		return;
+	}
+	if (Data.NewValue < Data.OldValue)
+	{
+		bBlockedHit = true;
+	}
+	if (Data.NewValue <= 0.f)
 	{
 		EndBlock(EBlockEndReason::Broken);
 	}
@@ -117,7 +132,10 @@ void UBlockComponent::EndBlock(EBlockEndReason Reason)
 	bBlocking = false;
 	SetComponentTickEnabled(false);
 	GetWorld()->GetTimerManager().ClearTimer(BlockTimer);
-	GetWorld()->GetTimerManager().SetTimer(CooldownTimer, BlockCooldown, false);
+	if (CurrentCooldown > 0.f)
+	{
+		GetWorld()->GetTimerManager().SetTimer(CooldownTimer, CurrentCooldown, false);
+	}
 
 	AbilitySystem->RemoveLooseGameplayTag(CombatTags::State_Blocking);
 	AbilitySystem->SetNumericAttributeBase(UCombatAttributeSet::GetBlockAttribute(), 0.f);

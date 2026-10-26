@@ -44,6 +44,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Block")
 	void StartBlock(AActor* Target);
 
+	/** StartBlock with its own length and following cooldown (e.g. a short reactive block). */
+	UFUNCTION(BlueprintCallable, Category = "Block")
+	void StartBlockFor(AActor* Target, float Duration, float Cooldown);
+
 	/** Ends a running block as Interrupted (still starts the cooldown). */
 	UFUNCTION(BlueprintCallable, Category = "Block")
 	void StopBlock();
@@ -60,6 +64,9 @@ public:
 	bool IsBlockingFrom(const FVector& SourceLocation) const;
 
 	AActor* GetBlockTarget() const { return BlockTarget.Get(); }
+
+	/** True if the current (or, inside OnBlockEnded, the ending) block absorbed at least one hit. */
+	bool DidBlockHit() const { return bBlockedHit; }
 
 	UPROPERTY(BlueprintAssignable, Category = "Block")
 	FOnBlockEnded OnBlockEnded;
@@ -111,7 +118,9 @@ private:
 	TWeakObjectPtr<AActor> BlockTarget;
 	FTimerHandle BlockTimer;
 	FTimerHandle CooldownTimer;
+	float CurrentCooldown = 0.f;
 	bool bBlocking = false;
+	bool bBlockedHit = false;
 
 	void HandleBlockChanged(const FOnAttributeChangeData& Data);
 	void CompleteBlock();

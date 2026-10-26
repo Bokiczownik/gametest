@@ -5,6 +5,9 @@
 #include "EnemyAIController.generated.h"
 
 class AEnemyCharacter;
+class UAbilitySystemComponent;
+class UGameplayAbility;
+enum class EShieldStance : uint8;
 
 /**
  * Brain for AEnemyCharacter, evaluated on a timer (UpdateInterval, no tick). Notices the player pawn within AggroRange
@@ -17,7 +20,8 @@ class AEnemyCharacter;
  * it then keeps chasing regardless of LoseAggroRange, GuardRadius and the hunt area. A chasing member that fights on its
  * own account (was hit, or the player is inside its own area and AggroRange) alerts its group every second, so the
  * group fights as long as one member does; members kept only by alerts do not renew them.
- * Bodyguards (AEnemyCharacter::bBodyguard) screen a nearby ranged ally instead of chasing (see there).
+ * Bodyguards (AEnemyCharacter::bBodyguard) screen a nearby ranged ally instead of chasing (see there); shield enemies
+ * (bShieldStances) otherwise pick the defensive or aggressive stance (EShieldStance).
  * Stops when the enemy or the player is dead.
  */
 UCLASS()
@@ -64,7 +68,10 @@ private:
 	double NextGroupAlertTime = 0.0;
 	double FlankStartTime = -1.0;
 	double FlankResumeTime = 0.0;
-	bool bGuarding = false;
+	double NextDefensiveAttackTime = 0.0;
+	bool bFacingPlayer = false;
+	TWeakObjectPtr<UAbilitySystemComponent> WatchedPlayerAbilities;
+	FDelegateHandle PlayerAbilityActivatedHandle;
 
 	void UpdateBehaviour();
 	bool IsProvoked() const;
@@ -74,7 +81,11 @@ private:
 	bool GetFlankPoint(const APawn* Player, float Distance, FVector& OutPoint);
 	const AEnemyCharacter* FindWard(const APawn* Player) const;
 	void UpdateBodyguard(APawn* Player, float Distance, const AEnemyCharacter& Ward);
-	void SetGuarding(bool bNewGuarding);
+	void SetFacingPlayer(bool bFace);
+	bool HasDefensiveSupport() const;
+	void UpdateDefensive(APawn* Player, float Distance);
+	void SetShieldStance(EShieldStance Stance, APawn* Player);
+	void HandlePlayerAbilityActivated(UGameplayAbility* Ability);
 	bool CanSee(const APawn* Player) const;
 	bool CanEngage(const APawn* Player) const;
 	bool CanEngageOnOwn(const APawn* Player) const;

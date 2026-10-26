@@ -1,5 +1,8 @@
 #include "EnemyAIController.h"
 
+#include "Abilities/GameplayAbility.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
 #include "EnemyAttackComponent.h"
 #include "EnemyCharacter.h"
 #include "EnemyRangedAIController.h"
@@ -11,6 +14,7 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "NavigationSystem.h"
 #include "TimerManager.h"
+#include "../Combat/CombatTags.h"
 #include "../Combat/HitReactionComponent.h"
 #include "../Health/HealthComponent.h"
 
@@ -184,11 +188,22 @@ void AEnemyAIController::UpdateCombat(APawn* Player, float Distance)
 	{
 		if (const AEnemyCharacter* Ward = FindWard(Player))
 		{
+			SetShieldStance(EShieldStance::Bodyguard, Player);
 			UpdateBodyguard(Player, Distance, *Ward);
 			return;
 		}
-		SetGuarding(false);
 	}
+	if (Self->bShieldStances)
+	{
+		const bool bDefensive = HasDefensiveSupport();
+		SetShieldStance(bDefensive ? EShieldStance::Defensive : EShieldStance::Aggressive, Player);
+		if (bDefensive)
+		{
+			UpdateDefensive(Player, Distance);
+			return;
+		}
+	}
+	SetFacingPlayer(false);
 
 	// Weapon raised only while running at the player or about to attack, not while stuck (e.g. no path yet).
 	Self->SetInCombat(Distance <= Attack->GetAttackRange() * 1.5f || Self->GetVelocity().Size2D() > 50.f);
@@ -379,7 +394,7 @@ void AEnemyAIController::UpdateBodyguard(APawn* Player, float Distance, const AE
 	AEnemyCharacter* Self = Enemy.Get();
 	UEnemyAttackComponent* Attack = Self->GetAttack();
 	Self->SetInCombat(true);
-	SetGuarding(true);
+	SetFacingPlayer(true);
 
 	const FVector SelfLocation = Self->GetActorLocation();
 	const FVector PlayerLocation = Player->GetActorLocation();
@@ -432,23 +447,98 @@ void AEnemyAIController::UpdateBodyguard(APawn* Player, float Distance, const AE
 	}
 }
 
-void AEnemyAIController::SetGuarding(bool bNewGuarding)
+void AEnemyAIController::SetFacingPlayer(bool bFace)
 {
-	if (bGuarding == bNewGuarding)
+	if (bFacingPlayer == bFace)
 	{
 		return;
 	}
-	bGuarding = bNewGuarding;
-	if (!bGuarding)
+	bFacingPlayer = bFace;
+	if (!bFacingPlayer)
 	{
 		ClearFocus(EAIFocusPriority::Gameplay);
 	}
-	// Guarding: faces the focus (player) while side-stepping; otherwise faces the walk direction.
+	// Facing: turns to the focus (player) while side-stepping, shield to the front; otherwise faces the walk direction.
 	if (AEnemyCharacter* Self = Enemy.Get())
 	{
 		UCharacterMovementComponent* Movement = Self->GetCharacterMovement();
-		Movement->bOrientRotationToMovement = !bGuarding;
-		Movement->bUseControllerDesiredRotation = bGuarding;
+		Movement->bOrientRotationToMovement = !bFacingPlayer;
+		Movement->bUseControllerDesiredRotation = bFacingPlayer;
+	}
+}
+
+bool AEnemyAIController::HasDefensiveSupport() const
+{
+	const AEnemyCharacter* Self = Enemy.Get();
+	for (TActorIterator<AEnemyCharacter> It(GetWorld()); It; ++It)
+	{
+		const AEnemyAIController* OtherAI = Cast<AEnemyAIController>(It->GetController());
+		if (*It != Self && !It->bShieldStances && !It->IsDead() && OtherAI && OtherAI->IsChasing()
+			&& (Self->AggroGroup.IsNone() || It->AggroGroup == Self->AggroGroup)
+			&& FVector::Dist2D(It->GetActorLocation(), Self->GetActorLocation()) <= Self->DefensiveAllyRadius)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void AEnemyAIController::UpdateDefensive(APawn* Player, float Distance)
+{
+	AEnemyCharacter* Self = Enemy.Get();
+	UEnemyAttackComponent* Attack = Self->GetAttack();
+	Self->SetInCombat(true);
+	SetFacingPlayer(true);
+	if (GetFocusActor() != Player)
+	{
+		SetFocus(Player);
+	}
+
+	// Holds the player at the edge of its reach and only now and then strikes.
+	const float AttackRange = Attack->GetAttackRange();
+	const double Now = GetWorld()->GetTimeSeconds();
+	if (Distance <= AttackRange)
+	{
+		StopMovement();
+		if (Now >= NextDefensiveAttackTime && Attack->CanStartAttack(Player))
+		{
+			Attack->StartAttack(Player);
+			NextDefensiveAttackTime = Now + Self->DefensiveAttackInterval;
+		}
+		return;
+	}
+	MoveToActor(Player, AttackRange * 0.8f);
+}
+
+void AEnemyAIController::SetShieldStance(EShieldStance Stance, APawn* Player)
+{
+	if (AEnemyCharacter* Self = Enemy.Get())
+	{
+		Self->SetShieldStance(Stance);
+	}
+
+	// Defensive: react to the player starting an attack (not polled: the swing would land before the next update).
+	UAbilitySystemComponent* PlayerAbilities = Stance == EShieldStance::Defensive && Player ? UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Player) : nullptr;
+	if (WatchedPlayerAbilities.Get() == PlayerAbilities)
+	{
+		return;
+	}
+	if (UAbilitySystemComponent* Old = WatchedPlayerAbilities.Get())
+	{
+		Old->AbilityActivatedCallbacks.Remove(PlayerAbilityActivatedHandle);
+	}
+	WatchedPlayerAbilities = PlayerAbilities;
+	PlayerAbilityActivatedHandle = PlayerAbilities
+		? PlayerAbilities->AbilityActivatedCallbacks.AddUObject(this, &AEnemyAIController::HandlePlayerAbilityActivated)
+		: FDelegateHandle();
+}
+
+void AEnemyAIController::HandlePlayerAbilityActivated(UGameplayAbility* Ability)
+{
+	AEnemyCharacter* Self = Enemy.Get();
+	if (Self && Ability && Ability->GetAssetTags().HasTag(CombatTags::Ability_Attack))
+	{
+		Self->TryReactiveBlock(Ability->GetAvatarActorFromActorInfo());
 	}
 }
 
@@ -503,7 +593,8 @@ void AEnemyAIController::SetChasing(bool bNewChasing)
 	StopMovement();
 	if (!bChasing)
 	{
-		SetGuarding(false);
+		SetFacingPlayer(false);
+		SetShieldStance(EShieldStance::None, nullptr);
 	}
 	PatrolWaitEnd = -1.0;
 	if (AEnemyCharacter* Self = Enemy.Get())
@@ -576,7 +667,8 @@ void AEnemyAIController::StopChase()
 		StopMovement();
 	}
 	bChasing = false;
-	SetGuarding(false);
+	SetFacingPlayer(false);
+	SetShieldStance(EShieldStance::None, nullptr);
 	if (bWasChasing)
 	{
 		OnChaseChanged(false);

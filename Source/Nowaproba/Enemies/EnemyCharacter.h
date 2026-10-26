@@ -28,6 +28,20 @@ enum class EEnemyBehaviour : uint8
 	FogHunter
 };
 
+/** How a shield enemy (AEnemyCharacter::bShieldStances) fights right now; chosen by AEnemyAIController each update. */
+UENUM(BlueprintType)
+enum class EShieldStance : uint8
+{
+	/** Not fighting, or not a shield enemy: plain block on damage. */
+	None,
+	/** Screening a ranged ally (bBodyguard). */
+	Bodyguard,
+	/** Other non-shield allies fight nearby: holds the player in front, short blocks when the player swings, rare attacks. */
+	Defensive,
+	/** Alone: attacks whenever it can, short block only after being hit. */
+	Aggressive
+};
+
 /**
  * Base enemy: Health + telegraphed melee Attack, driven by AEnemyAIController (auto-possessed when placed or spawned).
  * Detection/chase tuning lives here so each enemy BP can differ. On death: AI stops, the capsule stops blocking,
@@ -76,6 +90,12 @@ public:
 
 	/** Set by AEnemyAIController while it runs at the player or is within reach to attack (anim BP raises the weapon). */
 	void SetInCombat(bool bNewInCombat) { bInCombat = bNewInCombat; }
+
+	EShieldStance GetShieldStance() const { return ShieldStance; }
+	void SetShieldStance(EShieldStance NewStance) { ShieldStance = NewStance; }
+
+	/** Defensive stance: the player Attacker started an attack; raise a short block if it is ready and the attacker is close. */
+	void TryReactiveBlock(AActor* Attacker);
 
 	/** Fog hunter chase: ChaseSpeed within HunterNearDistance of the player, HunterFarSpeed farther away. */
 	void UpdateHunterChaseSpeed(float DistanceToPlayer);
@@ -169,6 +189,42 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Bodyguard", meta = (EditCondition = "bBodyguard"))
 	FName GuardChargeAttack = TEXT("ShieldCharge");
 
+	/**
+	 * Shield stances (EShieldStance) when not a bodyguard: Defensive while a chasing non-shield ally of the same AggroGroup
+	 * is within DefensiveAllyRadius, else Aggressive. Defensive: faces the player at the edge of its reach, attacks at
+	 * most every DefensiveAttackInterval, raises a ShortBlockDuration block when the player starts an attack within
+	 * ReactiveBlockRange and follows a short block that stopped a hit with BlockShoveAttack; the long block on damage
+	 * happens at most every LongBlockInterval. Aggressive: normal melee, damage raises a short block followed by
+	 * BlockCounterAttack. Short blocks are followed by ShortBlockCooldown.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Shield")
+	bool bShieldStances = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Shield", meta = (ClampMin = "0", EditCondition = "bShieldStances"))
+	float DefensiveAllyRadius = 1000.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Shield", meta = (ClampMin = "0", EditCondition = "bShieldStances"))
+	float DefensiveAttackInterval = 3.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Shield", meta = (ClampMin = "0", EditCondition = "bShieldStances"))
+	float ReactiveBlockRange = 350.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Shield", meta = (ClampMin = "0.1", EditCondition = "bShieldStances"))
+	float ShortBlockDuration = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Shield", meta = (ClampMin = "0", EditCondition = "bShieldStances"))
+	float ShortBlockCooldown = 2.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Shield", meta = (ClampMin = "0", EditCondition = "bShieldStances"))
+	float LongBlockInterval = 15.f;
+
+	/** Attack (FEnemyAttack::Name) after a defensive short block that stopped a hit. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Shield", meta = (EditCondition = "bShieldStances"))
+	FName BlockShoveAttack = TEXT("BlockShove");
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Enemy|Shield")
+	EShieldStance ShieldStance = EShieldStance::None;
+
 	/** True while the AI runs at the player or is within reach to attack. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Enemy")
 	bool bInCombat = false;
@@ -232,8 +288,11 @@ private:
 	TWeakObjectPtr<AFogHunterSpawner> HunterSpawner;
 	float LastHealth = 0.f;
 	bool bKnockedDown = false;
+	bool bShortBlock = false;
+	double NextLongBlockTime = 0.0;
 	FTimerHandle KnockdownTimer;
 
+	void StartShieldBlock(AActor* Target, bool bShort);
 	void StartKnockdown();
 	void EndKnockdown();
 

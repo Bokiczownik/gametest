@@ -134,6 +134,37 @@ void AEnemyCharacter::HandleHealthChanged(float CurrentHealth, float MaxHealth)
 		return;
 	}
 
+	if (ShieldStance == EShieldStance::Aggressive)
+	{
+		StartShieldBlock(Attacker, true);
+		return;
+	}
+	if (ShieldStance == EShieldStance::Defensive)
+	{
+		// Short blocks do most of the work; the long one is rare.
+		const double Now = GetWorld()->GetTimeSeconds();
+		if (Now < NextLongBlockTime)
+		{
+			return;
+		}
+		NextLongBlockTime = Now + LongBlockInterval;
+	}
+	StartShieldBlock(Attacker, false);
+}
+
+void AEnemyCharacter::TryReactiveBlock(AActor* Attacker)
+{
+	if (ShieldStance != EShieldStance::Defensive || !Attacker || IsDead() || bKnockedDown || !Block->CanBlock()
+		|| Attack->IsAttacking() || HitReaction->IsStaggered() || HitReaction->IsStunned()
+		|| FVector::Dist2D(Attacker->GetActorLocation(), GetActorLocation()) > ReactiveBlockRange)
+	{
+		return;
+	}
+	StartShieldBlock(Attacker, true);
+}
+
+void AEnemyCharacter::StartShieldBlock(AActor* Target, bool bShort)
+{
 	// Raise the shield: drop the attack recovery and stand still.
 	Attack->CancelAttack();
 	if (AAIController* AI = Cast<AAIController>(GetController()))
@@ -141,7 +172,15 @@ void AEnemyCharacter::HandleHealthChanged(float CurrentHealth, float MaxHealth)
 		AI->StopMovement();
 	}
 	SetInCombat(true);
-	Block->StartBlock(Attacker);
+	bShortBlock = bShort;
+	if (bShort)
+	{
+		Block->StartBlockFor(Target, ShortBlockDuration, ShortBlockCooldown);
+	}
+	else
+	{
+		Block->StartBlock(Target);
+	}
 }
 
 void AEnemyCharacter::HandleBlockEnded(EBlockEndReason Reason)
@@ -152,7 +191,18 @@ void AEnemyCharacter::HandleBlockEnded(EBlockEndReason Reason)
 	}
 	if (Reason == EBlockEndReason::Completed)
 	{
-		Attack->StartNamedAttack(Block->GetBlockTarget(), BlockCounterAttack);
+		if (bShortBlock && ShieldStance == EShieldStance::Defensive)
+		{
+			// Push the player off after a parried swing; nothing if the block caught nothing.
+			if (Block->DidBlockHit())
+			{
+				Attack->StartNamedAttack(Block->GetBlockTarget(), BlockShoveAttack);
+			}
+		}
+		else
+		{
+			Attack->StartNamedAttack(Block->GetBlockTarget(), BlockCounterAttack);
+		}
 	}
 	else if (Reason == EBlockEndReason::Broken)
 	{
